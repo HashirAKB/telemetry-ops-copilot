@@ -14,7 +14,8 @@ import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { createServer, type ServerResponse, type Server } from "node:http";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { LLMProvider } from "../llm/types";
 import { readJson } from "../server/http";
 import { jsonlSink, Tracer } from "../telemetry/tracer";
@@ -37,7 +38,7 @@ interface RunState {
   error?: string;
 }
 
-const ROOT = new URL("../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const MIME: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" };
 
 function send(res: ServerResponse, status: number, body: unknown, type = "application/json") {
@@ -98,7 +99,8 @@ export function createAgentApi(options: AgentApiOptions): Server {
       // Static files of the React app (optional, built in milestone M6).
       if (req.method === "GET") {
         const file = normalize(join(webDir, path === "/" ? "index.html" : path));
-        if (file.startsWith(webDir) && existsSync(file) && extname(file)) {
+        // Only serve files inside webDir (no "../" escapes).
+        if (file.startsWith(webDir + sep) && existsSync(file) && extname(file)) {
           return send(res, 200, readFileSync(file), MIME[extname(file)] ?? "application/octet-stream");
         }
       }

@@ -190,3 +190,15 @@ describe("record and replay", () => {
     expect(replayed.toolCalls).toEqual(original.toolCalls);
   });
 });
+
+describe("truncated responses", () => {
+  it("does not treat a max_tokens cut-off as a final answer", async () => {
+    const provider = new ReplayProvider({
+      description: "truncated",
+      model: "claude-opus-5-5",
+      responses: [{ content: [{ type: "text", text: "D-17 is overh" }], stopReason: "max_tokens", usage: { inputTokens: 10, outputTokens: 10 } }],
+    });
+    const result = await runAgent("Why is D-17 alerting?", { provider, mcp, approver: denyAll() });
+    expect(result.stopReason).toBe("error");
+  });
+});

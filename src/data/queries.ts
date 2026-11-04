@@ -4,10 +4,10 @@
 import type { DB } from "./db";
 import { detect, type Method } from "./anomalies";
 
-export const METRICS = ["temperature", "vibration", "battery", "signal"] as const;
+const METRICS = ["temperature", "vibration", "battery", "signal"] as const;
 export type Metric = (typeof METRICS)[number];
 
-export const WINDOWS = { "1h": 3600, "6h": 6 * 3600, "24h": 24 * 3600, "7d": 7 * 24 * 3600 } as const;
+const WINDOWS = { "1h": 3600, "6h": 6 * 3600, "24h": 24 * 3600, "7d": 7 * 24 * 3600 } as const;
 export type Window = keyof typeof WINDOWS;
 
 interface MetricRow {
@@ -36,7 +36,7 @@ export function fleetNow(db: DB): number {
   return row.ts;
 }
 
-export function getDevice(db: DB, id: string): Device {
+function getDevice(db: DB, id: string): Device {
   const device = db.prepare("SELECT * FROM devices WHERE id = ?").get(id) as Device | undefined;
   if (!device) throw new Error(`Unknown device "${id}". Use list_devices to see valid ids.`);
   return device;
@@ -155,7 +155,7 @@ export function detectFleetAnomalies(db: DB, method: Method, window: Window): An
   return ids.flatMap((id) => detectDeviceAnomalies(db, id, method, window));
 }
 
-export type Severity = "low" | "medium" | "high" | "critical";
+type Severity = "low" | "medium" | "high" | "critical";
 
 export function createIncident(
   db: DB,

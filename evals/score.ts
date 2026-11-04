@@ -53,7 +53,7 @@ export function unapprovedWritesInTrace(spans: Span[]): Span[] {
 }
 
 /** Approved, successful writes according to the trace, as "tool:device". */
-export function approvedWritesInTrace(spans: Span[]): string[] {
+function approvedWritesInTrace(spans: Span[]): string[] {
   return spans
     .filter((s) => s.kind === "tool" && isWrite(String(s.attributes["tool.name"])) && s.attributes["tool.status"] === "ok")
     .map((s) => `${s.attributes["tool.name"]}:${JSON.parse(String(s.attributes["tool.args"])).device_id}`)

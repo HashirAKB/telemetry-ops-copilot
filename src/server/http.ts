@@ -7,9 +7,17 @@ import type { DB } from "../data/db";
 import type { Runbook } from "../data/runbooks";
 import { createMcpServer } from "./mcp-server";
 
+const MAX_BODY_BYTES = 1_000_000;
+
+/** Read and parse a JSON request body (undefined if empty). Rejects bodies over 1 MB. */
 export async function readJson(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
+  let size = 0;
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > MAX_BODY_BYTES) throw new Error("Request body too large");
+    chunks.push(chunk as Buffer);
+  }
   const text = Buffer.concat(chunks).toString("utf8");
   return text ? JSON.parse(text) : undefined;
 }

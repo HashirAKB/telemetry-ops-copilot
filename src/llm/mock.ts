@@ -74,7 +74,7 @@ export class MockProvider implements LLMProvider {
 }
 
 /** Extract the user's question and every completed tool call from the history. */
-export function readConversation(messages: Message[]): { question: string; calls: PastCall[] } {
+function readConversation(messages: Message[]): { question: string; calls: PastCall[] } {
   const first = messages[0];
   const question =
     typeof first?.content === "string"
@@ -110,7 +110,7 @@ export function readConversation(messages: Message[]): { question: string; calls
 
 const has = (text: string, re: RegExp) => re.test(text);
 
-export function plan(question: string, calls: PastCall[]): Step {
+function plan(question: string, calls: PastCall[]): Step {
   const q = question.toLowerCase();
   const deviceIds = [...new Set(question.toUpperCase().match(/\bD-\d{2}\b/g) ?? [])];
 

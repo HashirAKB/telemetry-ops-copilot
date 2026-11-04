@@ -2,6 +2,7 @@
 // all into memory and search them with simple keyword scoring.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface Runbook {
   slug: string; // file name without .md, e.g. "overheating"
@@ -9,7 +10,7 @@ export interface Runbook {
   content: string;
 }
 
-export const RUNBOOK_DIR = new URL("../../runbooks/", import.meta.url).pathname;
+const RUNBOOK_DIR = fileURLToPath(new URL("../../runbooks/", import.meta.url));
 
 export function loadRunbooks(dir = RUNBOOK_DIR): Runbook[] {
   return readdirSync(dir)
@@ -24,7 +25,7 @@ export function loadRunbooks(dir = RUNBOOK_DIR): Runbook[] {
 
 const STOPWORDS = new Set(["the", "a", "an", "is", "of", "to", "and", "or", "in", "on", "for", "why", "what", "how", "with", "my"]);
 
-export function tokenize(text: string): string[] {
+function tokenize(text: string): string[] {
   return (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((t) => t.length > 1 && !STOPWORDS.has(t));
 }
 

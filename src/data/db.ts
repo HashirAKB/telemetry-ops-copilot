@@ -8,7 +8,7 @@ import { dirname } from "node:path";
 
 export type DB = Database.Database;
 
-export const SCHEMA = `
+const SCHEMA = `
 CREATE TABLE IF NOT EXISTS devices (
   id        TEXT PRIMARY KEY,         -- e.g. "D-17"
   site      TEXT NOT NULL,            -- e.g. "plant-a"

@@ -111,6 +111,7 @@ export async function runAgent(question: string, options: AgentOptions): Promise
     messages.push({ role: "assistant", content: response.content });
 
     if (response.stopReason === "refusal") return finish("refusal", "The model declined this request.");
+    if (response.stopReason === "max_tokens") return finish("error", "The model's response was cut off (max_tokens).");
 
     const toolUses = response.content.filter((b): b is ToolUseBlock => b.type === "tool_use");
     if (toolUses.length === 0) {
