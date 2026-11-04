@@ -24,7 +24,8 @@ import { extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { LLMProvider } from "../llm/types";
 import { readJson } from "../server/http";
-import { jsonlSink, Tracer } from "../telemetry/tracer";
+import { defaultSink } from "../telemetry/otlp";
+import { Tracer } from "../telemetry/tracer";
 import { withAudit, type AuditLog } from "./audit";
 import { HttpApprover } from "./http-approver";
 import { runAgent, type RunResult } from "./loop";
@@ -65,7 +66,7 @@ function send(res: ServerResponse, status: number, body: unknown, type = "applic
 export function createAgentApi(options: AgentApiOptions): Server {
   const approver = options.approver ?? new HttpApprover();
   const runApprover = options.audit ? withAudit(approver, options.audit) : approver;
-  const tracer = new Tracer(jsonlSink(options.traceDir));
+  const tracer = new Tracer(defaultSink(options.traceDir));
   const runs = new Map<string, RunState>();
   const webDir = options.webDir ?? join(ROOT, "web/dist");
 

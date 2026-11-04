@@ -14,7 +14,8 @@ import { AuditLog, withAudit } from "./audit";
 import { formatRun } from "./format";
 import { runAgent } from "./loop";
 import { connectHttp, connectInProcess, connectStdio } from "./mcp-client";
-import { jsonlSink, Tracer } from "../telemetry/tracer";
+import { defaultSink } from "../telemetry/otlp";
+import { Tracer } from "../telemetry/tracer";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -44,7 +45,9 @@ const mcp =
 
 const provider = createProvider(values.provider as ProviderName);
 console.log(`provider=${provider.name} model=${provider.model} transport=${values.transport}\n`);
-const result = await runAgent(question, { provider, mcp, approver, tracer: new Tracer(jsonlSink("traces")) });
+const sink = defaultSink("traces");
+const result = await runAgent(question, { provider, mcp, approver, tracer: new Tracer(sink) });
 console.log(formatRun(question, result));
 console.log(`  trace: traces/${result.runId}.jsonl (open viewer/index.html to inspect)`);
+await sink.flush();
 await mcp.close();

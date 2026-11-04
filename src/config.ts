@@ -5,6 +5,8 @@ export const config = {
   auditDbPath: process.env.AUDIT_DB_PATH ?? "data/audit.db", // agent-side approval audit log
   mcpPort: Number(process.env.MCP_PORT ?? 3001),
   agentPort: Number(process.env.AGENT_PORT ?? 3000),
+  // Standard OpenTelemetry variable; when set, traces are also exported via OTLP/HTTP.
+  otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   agentApiToken: process.env.AGENT_API_TOKEN ?? "",
   anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-opus-5-5",

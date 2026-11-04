@@ -147,7 +147,7 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 1. ~~**Authenticate the HTTP API** with a bearer token from the environment, so approvals cannot be granted by anyone who can reach the port.~~ Done: set `AGENT_API_TOKEN`; the React page and trace viewer ask for it.
 2. ~~**Persist an approval audit log** (who approved what, when, for which run) in SQLite instead of only in traces.~~ Done: every CLI and HTTP decision goes to `data/audit.db` (`AUDIT_DB_PATH`), readable at `GET /api/audit`.
 3. ~~**BM25 ranking for runbook search**, with document-length normalisation and IDF so common words stop dominating.~~ Done: `searchRunbooks` in `src/data/runbooks.ts`.
-4. **OTLP export** of the same spans, so traces can go to Jaeger, Grafana Tempo or Honeycomb.
+4. ~~**OTLP export** of the same spans, so traces can go to Jaeger, Grafana Tempo or Honeycomb.~~ Done: set `OTEL_EXPORTER_OTLP_ENDPOINT` (e.g. `http://localhost:4318`) and each finished run is also sent as OTLP/HTTP JSON (`src/telemetry/otlp.ts`).
 5. **Real-model eval run** with an LLM-as-judge for answer quality, alongside the deterministic checks.
 
 ## Repository map
