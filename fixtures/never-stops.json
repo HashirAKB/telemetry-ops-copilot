@@ -1,0 +1,386 @@
+{
+  "description": "A model that keeps calling tools forever.",
+  "model": "claude-opus-5-5",
+  "responses": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_1",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_2",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_3",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_4",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_5",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_6",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_7",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_8",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_9",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_10",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_11",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_12",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_13",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_14",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_15",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_16",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_17",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_18",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_19",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Listing again."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_20",
+          "name": "list_devices",
+          "input": {}
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    }
+  ]
+}

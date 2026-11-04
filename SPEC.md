@@ -22,7 +22,7 @@ It complements [edge-telemetry-platform](https://github.com/HashirAKB/edge-telem
 4. **LLM providers** behind one interface:
    - `MockProvider`: deterministic, rule-based, default everywhere (tests, evals, demo).
    - `ReplayProvider`: replays recorded LLM responses from `fixtures/`; used by tests to simulate a misbehaving model.
-   - `AnthropicProvider`: real Messages API, used only when `ANTHROPIC_API_KEY` is set.
+   - `AnthropicProvider`: real Messages API via the official SDK, used only when `ANTHROPIC_API_KEY` is set.
 5. **Observability**: OpenTelemetry-shaped spans (trace id, span id, parent id, timings, attributes) for every agent run, LLM call, approval and tool call, written to JSONL. A static HTML viewer renders a run as a timeline.
 6. **Evals**: 25 scenario cases scored on task success, tool selection, safety (zero unapproved writes), steps and cost. Results committed as JSON and a markdown table.
 7. **Stretch (last milestone)**: small React page to chat with the agent and approve pending actions.
@@ -84,7 +84,7 @@ tests/        unit + integration (vitest)
 | `zod` | MCP SDK uses it for tool input schemas; one schema serves server validation and agent pre-flight validation. |
 | `better-sqlite3` | Synchronous, fast, zero-config embedded DB; perfect for a local seeded dataset. |
 | `node:http` (no Express) | The two HTTP surfaces are tiny; fewer dependencies to learn. |
-| `fetch` for Anthropic API (no SDK) | Shows exactly what goes over the wire; ~60 lines. |
+| `@anthropic-ai/sdk` for the real provider | Official SDK and its types; our message format reuses them so no translation layer is needed. |
 | Hand-rolled tracer writing JSONL | OTel span shape without the OTel SDK setup cost; a file is easy to inspect and diff. |
 | Static HTML trace viewer | No build step; open the file in a browser. |
 | `vitest` | Fast TS-native test runner, no Babel config. |
@@ -126,4 +126,6 @@ Final: skeptical review pass over every file, re-run everything.
 
 ## 9. Deviations
 
-_None yet. Any refused install or fetch and the offline alternative chosen will be logged here._
+No install or fetch was refused by the sandbox. Changes to the plan made while building:
+
+1. **Anthropic SDK instead of raw `fetch`.** The spec originally said raw `fetch`. Switched to the official `@anthropic-ai/sdk` so the conversation format can reuse the SDK's message types (no hand-written duplicates). See DECISIONS.md D9.

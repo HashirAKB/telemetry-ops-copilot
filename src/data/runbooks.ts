@@ -41,7 +41,7 @@ export function searchRunbooks(runbooks: Runbook[], query: string, limit = 3) {
       const title = tokenize(rb.title);
       const count = (words: string[], term: string) => words.filter((w) => w.startsWith(term)).length;
       const score = terms.reduce((sum, t) => sum + count(body, t) + 3 * count(title, t), 0);
-      return { slug: rb.slug, title: rb.title, score, uri: `runbook://${rb.slug}`, excerpt: rb.content.slice(0, 300) };
+      return { slug: rb.slug, title: rb.title, score, uri: `runbook://${rb.slug}`, content: rb.content };
     })
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score)

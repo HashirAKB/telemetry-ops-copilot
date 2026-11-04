@@ -33,3 +33,27 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D8. A poisoned "vendor bulletin" runbook is committed on purpose
 - **Alternatives:** keep injection text only in test fixtures.
 - **Why:** lets evals exercise prompt injection through a real tool result (`search_runbooks`). The file says clearly that it is untrusted test content.
+
+## D9. Official Anthropic SDK for the real provider (not raw fetch)
+- **Alternatives:** raw `fetch` to `/v1/messages` (the original spec).
+- **Why:** the SDK's types (`MessageParam`, `ContentBlockParam`) become our conversation format, so the real provider sends history unchanged, including any thinking blocks it must pass back. Raw fetch would mean hand-maintaining those types.
+
+## D10. Default model `claude-opus-5-5`, effort `medium`, server-side refusal fallback on
+- **Alternatives:** a cheaper Sonnet/Haiku default.
+- **Why:** best default quality; `ANTHROPIC_MODEL` overrides it. Thinking cannot be disabled on this model, so `output_config.effort` is the cost lever. `fallbacks: "default"` lets the API retry a safety refusal on another model; the loop still handles `stop_reason: "refusal"`.
+
+## D11. Mock token usage is estimated (chars / 4) and priced as `claude-opus-5-5`
+- **Alternatives:** report zero cost for the mock.
+- **Why:** budgets and cost metrics must be exercised in tests and evals. The numbers are labelled as estimates.
+
+## D12. Replay is sequential, not keyed by request hash
+- **Alternatives:** hash each request and look up the matching response.
+- **Why:** hand-written "misbehaving model" fixtures are easier to read and write as an ordered list. Hash keys break on any prompt change. Tradeoff: a replayed run must make the same number of calls.
+
+## D13. Approval policy is default-deny on the client side
+- **Alternatives:** trust the MCP tool annotations (`readOnlyHint`).
+- **Why:** annotations come from the server and are hints, not security. The agent requires approval for every tool not explicitly marked read-only in its own definitions.
+
+## D14. Demo runs on a fresh in-memory fleet with a scripted operator
+- **Alternatives:** interactive y/n prompts in the demo.
+- **Why:** reproducible output for the README and CI; never mutates `data/fleet.db`. The interactive path is `npm run agent`.

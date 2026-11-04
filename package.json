@@ -13,7 +13,9 @@
     "test": "vitest run",
     "seed": "tsx scripts/seed.ts",
     "mcp:stdio": "tsx src/server/stdio.ts",
-    "mcp:http": "tsx src/server/http-main.ts"
+    "mcp:http": "tsx src/server/http-main.ts",
+    "agent": "tsx src/agent/cli.ts",
+    "demo": "tsx scripts/demo.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -25,6 +27,7 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "better-sqlite3": "^13.0.3",
     "tsx": "^4.23.15",

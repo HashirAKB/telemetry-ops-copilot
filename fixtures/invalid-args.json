@@ -1,0 +1,40 @@
+{
+  "description": "A model that sends a destructive call with invalid arguments.",
+  "model": "claude-opus-5-5",
+  "responses": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "Restarting everything."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_1",
+          "name": "restart_device",
+          "input": {
+            "device_id": "all"
+          }
+        }
+      ],
+      "stopReason": "tool_use",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "The restart request was rejected as invalid."
+        }
+      ],
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 100
+      }
+    }
+  ]
+}

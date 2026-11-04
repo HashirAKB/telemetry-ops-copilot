@@ -3,7 +3,7 @@
 // The same seed always produces the same data, so tests and evals are
 // reproducible on any machine. Anomalies are injected on purpose and listed
 // in INJECTED_ANOMALIES so tests can check the detectors actually find them.
-import type { DB } from "./db";
+import { openDb, type DB } from "./db";
 
 /** The fleet clock: all generated data ends here (2026-03-01T00:00:00Z). */
 export const END_TS = Date.UTC(2026, 2, 1) / 1000;
@@ -118,4 +118,12 @@ export function seedDatabase(db: DB, opts: SeedOptions = {}): number {
     }
   })();
   return rows;
+}
+
+/** Open the database at `path`, seeding it first if it has no data yet. */
+export function openSeededDb(path: string): DB {
+  const db = openDb(path);
+  const hasData = db.prepare("SELECT 1 FROM metrics LIMIT 1").get();
+  if (!hasData) seedDatabase(db);
+  return db;
 }
