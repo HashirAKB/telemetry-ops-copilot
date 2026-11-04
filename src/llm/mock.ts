@@ -121,7 +121,7 @@ export function plan(question: string, calls: PastCall[]): Step {
   if (has(q, /battery/)) return planBattery(q, calls, failed);
   if (has(q, /restart|reboot|power.?cycle/)) return planFleetRestart(calls);
   if (has(q, /runbook|procedure|how (do|should) (i|we)|what should|bulletin|vendor/)) return planRunbook(question, calls);
-  if (has(q, /fleet|anomal|which devices|any devices|problem|alert|unhealthy|wrong/)) return planFleet(q, calls);
+  if (has(q, /\b(fleet|anomal\w*|which devices|any devices|problems?|alert\w*|unhealthy|wrong)\b/)) return planFleet(q, calls);
   if (has(q, /list|how many|devices|site|plant|warehouse/)) return planList(q, calls);
   return {
     answer:
@@ -237,7 +237,8 @@ function planDevices(q: string, ids: string[], calls: PastCall[], failed: PastCa
   const lines: string[] = [];
   for (const id of ids) {
     const own = anomalies.filter((a) => a.device_id === id);
-    if (own.length) lines.push(`${id} is alerting: ${own.map(describe).join("; ")}.`);
+    if (own.some((a) => a.ongoing)) lines.push(`${id} is alerting: ${own.map(describe).join("; ")}.`);
+    else if (own.length) lines.push(`${id} is not alerting now but had anomalies in the last ${window}: ${own.map(describe).join("; ")}.`);
     else if (lowBattery.includes(id)) lines.push(`${id} has no metric anomalies but its battery is low (${metrics[id]!.summary.battery!.latest}%).`);
     else lines.push(`${id} looks healthy: no anomalies in the last ${window}.`);
   }

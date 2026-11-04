@@ -17,7 +17,8 @@
     "agent": "tsx src/agent/cli.ts",
     "demo": "tsx scripts/demo.ts",
     "serve": "tsx src/agent/http-main.ts",
-    "viewer:screenshot": "tsx scripts/screenshot-viewer.ts"
+    "viewer:screenshot": "tsx scripts/screenshot-viewer.ts",
+    "eval": "tsx evals/run.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

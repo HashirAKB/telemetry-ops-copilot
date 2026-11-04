@@ -18,3 +18,14 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      # Evals in mock mode (no API key): fail on any unapproved write or
+      # task success below 90%, and fail if committed results are stale.
+      - run: npm run eval -- --check
+      - run: git diff --exit-code evals/results.json evals/results.md
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t telemetry-ops-copilot .
+      - run: docker run --rm telemetry-ops-copilot npm run demo

@@ -128,4 +128,5 @@ Final: skeptical review pass over every file, re-run everything.
 
 No install or fetch was refused by the sandbox. Changes to the plan made while building:
 
-1. **Anthropic SDK instead of raw `fetch`.** The spec originally said raw `fetch`. Switched to the official `@anthropic-ai/sdk` so the conversation format can reuse the SDK's message types (no hand-written duplicates). See DECISIONS.md D9.
+1. **Docker image not built locally.** `docker build` failed because Docker Hub returned `429 Too Many Requests` for `node:22-slim` inside the sandbox. Not retried through other routes. Instead, every Dockerfile step (production-only `npm ci --omit=dev`, `npm run seed`, `npm run serve`, `npm run demo`) was run in a clean copy of the files the Dockerfile copies, and the CI workflow has a `docker` job that builds the image and runs the demo inside it.
+2. **Anthropic SDK instead of raw `fetch`.** The spec originally said raw `fetch`. Switched to the official `@anthropic-ai/sdk` so the conversation format can reuse the SDK's message types (no hand-written duplicates). See DECISIONS.md D9.
