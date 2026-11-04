@@ -93,3 +93,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D23. BM25 instead of term counting for runbook search; no embeddings
 - **Alternatives:** keep term counts; embeddings with a vector index.
 - **Why:** a test showed term counting ranks a document that repeats a common word above the one with the rare, relevant word. BM25 fixes that in about 30 lines with no dependencies or model downloads. Embeddings would add synonym matching but need a model, which is overkill for six documents and impossible offline here.
+
+## D24. OTLP export as a hand-written OTLP/HTTP JSON sink, one POST per finished trace
+- **Alternatives:** OpenTelemetry SDK with the OTLP exporter package; protobuf encoding.
+- **Why:** JSON encoding is part of the OTLP spec and needs no dependencies. Buffering until the root span ends keeps a trace together in one request. Failures are logged and swallowed so a missing collector never breaks a run. Uses the standard `OTEL_EXPORTER_OTLP_ENDPOINT` variable.

@@ -11,4 +11,4 @@ A small tracer (`src/telemetry/tracer.ts`) produces spans with the OpenTelemetry
 ## Consequences
 - Traces are plain files: easy to grep, diff, attach to a bug report, and load in tests (`memorySink`).
 - The eval safety metric reads the same spans, so tracing is part of the safety story, not only debugging.
-- Not wire-compatible with OTLP yet; exporting to Jaeger/Honeycomb/Grafana means adding an OTLP sink. Listed as future work.
+- Exporting to Jaeger, Grafana Tempo or Honeycomb only needed one more sink: `src/telemetry/otlp.ts` converts spans to OTLP/HTTP JSON and is enabled by the standard `OTEL_EXPORTER_OTLP_ENDPOINT` variable. No change to the tracer or the loop was needed, which confirmed the choice.

@@ -167,7 +167,7 @@ On the seeded data the classic z-score missed a 3-hour overheating step: the ano
 For slow drifts. Each point in a drift may be only slightly unusual, but the smoothed series moves steadily away from the baseline. Smoothing also cancels random noise, so it raises fewer isolated alarms. The vibration drift on D-08 is the example.
 
 **14. What is in a trace, and how would you go to production observability?**
-OpenTelemetry-shaped spans: trace id (= run id), span id, parent, timings, status and attributes such as `gen_ai.usage.input_tokens`, `tool.name`, `approval.approved`. They are written as JSONL and rendered by a static viewer. For production I would add an OTLP exporter sink, keeping the same span model, and send to Tempo, Jaeger or Honeycomb.
+OpenTelemetry-shaped spans: trace id (= run id), span id, parent, timings, status and attributes such as `gen_ai.usage.input_tokens`, `tool.name`, `approval.approved`. They are written as JSONL and rendered by a static viewer. Setting `OTEL_EXPORTER_OTLP_ENDPOINT` also exports them as OTLP/HTTP JSON (`src/telemetry/otlp.ts`) to Tempo, Jaeger or Honeycomb: adding that was just a new sink, with no change to the loop. In production I would add sampling and batching across traces.
 
 **15. What would break first in production, and what would you change?**
 The HTTP API has no auth, so anyone who can reach it could approve actions: add authentication and an audit log of approvers. Runs and pending approvals are in memory: persist them. SQLite and per-request full scans would not scale to millions of devices: use a time-series store and precomputed anomaly jobs. And I would run the eval suite against the real model, with an LLM judge for answer quality, before every prompt or model change.
