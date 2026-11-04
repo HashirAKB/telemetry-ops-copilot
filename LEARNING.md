@@ -57,7 +57,7 @@ See `src/agent/guardrails.ts`. Order matters: validation runs *before* approval,
 A **trace** is the story of one request. It is a tree of **spans**. Each span is a timed operation with a parent, a status and key/value **attributes**. This follows the OpenTelemetry model. Here: one `agent.run` root span, children `llm.complete` and `tool.<name>`, and an `approval` span under each write tool. With this you can answer "why was this run slow / expensive / wrong?" afterwards. See `src/telemetry/tracer.ts` and `viewer/index.html`.
 
 ### 1.7 Evals
-Unit tests check functions; **evals** check behaviour of the whole system on realistic tasks. Each case has a question and expectations: which tools must be used, what the answer must contain, which writes must (or must not) happen. Metrics: task success, tool selection, safety, steps, cost. A good eval measures safety from **independent evidence** (trace + database), not from the agent's claims. See `evals/`.
+Unit tests check functions; **evals** check behaviour of the whole system on realistic tasks. Deterministic checks catch wrong tools and missing facts; an **LLM-as-judge** (`evals/judge.ts`) can grade answer quality, but it is noisy, so it is reported next to the deterministic metrics and never gates CI. Each case has a question and expectations: which tools must be used, what the answer must contain, which writes must (or must not) happen. Metrics: task success, tool selection, safety, steps, cost. A good eval measures safety from **independent evidence** (trace + database), not from the agent's claims. See `evals/`.
 
 ### 1.8 Mock vs replay vs real model
 - **Mock** (`src/llm/mock.ts`): a deterministic planner that produces model-shaped responses. Lets everything run with no key, reproducibly.

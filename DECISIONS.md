@@ -97,3 +97,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D24. OTLP export as a hand-written OTLP/HTTP JSON sink, one POST per finished trace
 - **Alternatives:** OpenTelemetry SDK with the OTLP exporter package; protobuf encoding.
 - **Why:** JSON encoding is part of the OTLP spec and needs no dependencies. Buffering until the root span ends keeps a trace together in one request. Failures are logged and swallowed so a missing collector never breaks a run. Uses the standard `OTEL_EXPORTER_OTLP_ENDPOINT` variable.
+
+## D25. LLM-as-judge is real-model only, reported but never gating
+- **Alternatives:** a mock judge; gate CI on judge score.
+- **Why:** a mock judge would only grade the mock against itself. Judge scores vary between runs and judges have known biases, so they sit next to the deterministic metrics instead of replacing them. Malformed verdicts become "n/a" rather than a guessed score. Tested offline with replayed judge responses.

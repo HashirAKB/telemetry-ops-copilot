@@ -3,6 +3,7 @@
 //   npm run eval                       mock mode, writes evals/results.{json,md}
 //   npm run eval -- --check            also exit 1 if safety < 100% or success < --min-success
 //   npm run eval -- --provider anthropic   real model, writes evals/results-anthropic.{json,md}
+//   npm run eval -- --provider anthropic --judge   + LLM-as-judge answer quality (1-5)
 //
 // Every case runs against the same freshly seeded 7-day fleet; writes are
 // wiped between cases so cases are independent.
@@ -16,6 +17,7 @@ import { seedDatabase } from "../src/data/seed";
 import { createProvider } from "../src/llm";
 import { loadFixture, ReplayProvider } from "../src/llm/replay";
 import { memorySink, Tracer, type Span } from "../src/telemetry/tracer";
+import { judgeAnswer } from "./judge";
 import { scoreCase, summarize, type CaseScore, type EvalCase } from "./score";
 
 const { values } = parseArgs({
@@ -23,9 +25,13 @@ const { values } = parseArgs({
     provider: { type: "string", default: "mock" },
     check: { type: "boolean", default: false },
     "min-success": { type: "string", default: "90" },
+    judge: { type: "boolean", default: false },
   },
 });
 const providerName = values.provider === "anthropic" ? "anthropic" : "mock";
+
+// The judge is always a real model: a mock judge would only grade itself.
+const judge = values.judge ? createProvider("anthropic") : undefined;
 
 const cases = JSON.parse(readFileSync("evals/cases.json", "utf8")) as EvalCase[];
 const db = openDb(":memory:");
@@ -55,6 +61,7 @@ for (const c of cases) {
   const approver = new PolicyApprover((r) => c.approve === "all" || (Array.isArray(c.approve) && c.approve.includes(r.tool)));
   const result = await runAgent(c.question, { provider, mcp, approver, tracer: new Tracer(memorySink(spans)) });
   const score = scoreCase(c, result, spans, writesInDb(db));
+  if (judge) score.judge = await judgeAnswer(judge, c.question, result);
   scores.push(score);
   console.log(`${score.success ? "PASS" : "FAIL"} ${c.id}${score.failures.length ? `  (${score.failures.join("; ")})` : ""}`);
 }
@@ -80,6 +87,7 @@ function fail(message: string): never {
 
 function toMarkdown(provider: string, s: ReturnType<typeof summarize>, rows: CaseScore[]): string {
   const yes = (b: boolean) => (b ? "yes" : "**no**");
+  const judged = rows.some((r) => r.judge);
   return [
     `# Eval results (${provider})`,
     "",
@@ -96,12 +104,14 @@ function toMarkdown(provider: string, s: ReturnType<typeof summarize>, rows: Cas
     `| Avg steps (LLM calls) per run | ${s.avgSteps} |`,
     `| Avg cost per run (USD) | ${s.avgCostUsd} |`,
     `| Total cost (USD) | ${s.totalCostUsd} |`,
+    ...(s.avgJudgeScore !== undefined ? [`| Avg judge score (1-5, ${s.judgedCases} judged) | ${s.avgJudgeScore} |`] : []),
     "",
-    "| Case | Category | Success | Tools | Unapproved writes | Steps | Tokens in/out | Cost (USD) |",
-    "|---|---|---|---|---|---|---|---|",
+    `| Case | Category | Success | Tools | Unapproved writes | Steps | Tokens in/out | Cost (USD) |${judged ? " Judge |" : ""}`,
+    `|---|---|---|---|---|---|---|---|${judged ? "---|" : ""}`,
     ...rows.map(
       (r) =>
-        `| ${r.id} | ${r.category} | ${yes(r.success)} | ${yes(r.toolSelection)} | ${r.unsafeWrites} | ${r.steps} | ${r.inputTokens}/${r.outputTokens} | ${r.costUsd.toFixed(4)} |`,
+        `| ${r.id} | ${r.category} | ${yes(r.success)} | ${yes(r.toolSelection)} | ${r.unsafeWrites} | ${r.steps} | ${r.inputTokens}/${r.outputTokens} | ${r.costUsd.toFixed(4)} |` +
+        (judged ? ` ${r.judge?.score ?? "n/a"} |` : ""),
     ),
     "",
   ].join("\n");

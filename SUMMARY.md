@@ -39,7 +39,7 @@ Telemetry Ops Copilot is an AI operations assistant for an IoT fleet, in TypeScr
 
 ## Known gaps
 
-- Mock eval scores (100% success) measure the harness, not model reasoning. No real-model eval results exist yet.
+- Mock eval scores (100% success) measure the harness, not model reasoning. A real-model mode with an LLM-as-judge exists (`--provider anthropic --judge`) but has not been run, so no real-model results exist yet.
 - The agent HTTP API has optional bearer-token auth (`AGENT_API_TOKEN`), but runs and pending approvals are kept in memory, and the MCP HTTP endpoint has no auth.
 - The mock planner only understands a fixed set of intents.
 - Runbook search is BM25 keyword ranking: no synonyms or semantic matching.

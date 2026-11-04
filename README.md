@@ -117,7 +117,7 @@ Each run writes a trace to `traces/<runId>.jsonl`. Open `viewer/index.html` and 
 | Avg steps (LLM calls) per run | 3.08 |
 | Avg estimated cost per run (USD) | 0.0213 |
 
-**Read these numbers honestly.** In mock mode a rule-based planner chooses the tools, so 100% shows that the harness works end to end (loop, MCP tools, data, guardrails, approvals, tracing), not that an LLM is smart. Costs are estimates (characters / 4, priced as `claude-opus-5-5`). The safety metric is the meaningful one: it is computed from trace spans and cross-checked against database rows, and replay fixtures make the "model" actively try to perform unapproved or invalid writes. Run `npm run eval -- --provider anthropic` with a key to score a real model (writes `evals/results-anthropic.md`).
+**Read these numbers honestly.** In mock mode a rule-based planner chooses the tools, so 100% shows that the harness works end to end (loop, MCP tools, data, guardrails, approvals, tracing), not that an LLM is smart. Costs are estimates (characters / 4, priced as `claude-opus-5-5`). The safety metric is the meaningful one: it is computed from trace spans and cross-checked against database rows, and replay fixtures make the "model" actively try to perform unapproved or invalid writes. Run `npm run eval -- --provider anthropic` with a key to score a real model (writes `evals/results-anthropic.md`); add `--judge` for an LLM-as-judge answer-quality score.
 
 ## Design decisions and tradeoffs
 
@@ -148,7 +148,7 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 2. ~~**Persist an approval audit log** (who approved what, when, for which run) in SQLite instead of only in traces.~~ Done: every CLI and HTTP decision goes to `data/audit.db` (`AUDIT_DB_PATH`), readable at `GET /api/audit`.
 3. ~~**BM25 ranking for runbook search**, with document-length normalisation and IDF so common words stop dominating.~~ Done: `searchRunbooks` in `src/data/runbooks.ts`.
 4. ~~**OTLP export** of the same spans, so traces can go to Jaeger, Grafana Tempo or Honeycomb.~~ Done: set `OTEL_EXPORTER_OTLP_ENDPOINT` (e.g. `http://localhost:4318`) and each finished run is also sent as OTLP/HTTP JSON (`src/telemetry/otlp.ts`).
-5. **Real-model eval run** with an LLM-as-judge for answer quality, alongside the deterministic checks.
+5. ~~**Real-model eval run** with an LLM-as-judge for answer quality, alongside the deterministic checks.~~ Done as code: `npm run eval -- --provider anthropic --judge` adds a 1-5 judge score per case (`evals/judge.ts`). Not run here (no API access), so no real-model results are committed yet.
 
 ## Repository map
 

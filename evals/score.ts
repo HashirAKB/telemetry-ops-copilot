@@ -36,6 +36,7 @@ export interface CaseScore {
   costUsd: number;
   stopReason: string;
   failures: string[]; // human-readable reasons, empty when everything passed
+  judge?: { score: number | null; reason: string }; // only with --judge
 }
 
 const isWrite = (name: string) => (TOOLS as Record<string, { access: string }>)[name]?.access === "write";
@@ -123,5 +124,14 @@ export function summarize(scores: CaseScore[]) {
     avgSteps: Number((sum((s) => s.steps) / n).toFixed(2)),
     avgCostUsd: Number((sum((s) => s.costUsd) / n).toFixed(4)),
     totalCostUsd: Number(sum((s) => s.costUsd).toFixed(4)),
+    ...judgeSummary(scores),
   };
+}
+
+/** Average judge score over the cases the judge could score (omitted when no judge ran). */
+function judgeSummary(scores: CaseScore[]): { avgJudgeScore?: number; judgedCases?: number } {
+  const judged = scores.map((s) => s.judge?.score).filter((s): s is number => typeof s === "number");
+  if (!scores.some((s) => s.judge)) return {};
+  const avg = judged.length ? judged.reduce((a, b) => a + b, 0) / judged.length : 0;
+  return { avgJudgeScore: Number(avg.toFixed(2)), judgedCases: judged.length };
 }

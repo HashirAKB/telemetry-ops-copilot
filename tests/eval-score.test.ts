@@ -76,3 +76,16 @@ describe("eval scoring", () => {
     expect(summarize([a, b])).toMatchObject({ cases: 2, taskSuccessPct: 50, unapprovedWrites: 0, avgSteps: 3 });
   });
 });
+
+describe("judge summary", () => {
+  it("averages judge scores, ignoring unscorable verdicts, and is absent without a judge", () => {
+    const base = scoreCase(testCase, result(), [restartSpan, approvedSpan], ["restart_device:D-33"]);
+    expect(summarize([base])).not.toHaveProperty("avgJudgeScore");
+    const judged = [
+      { ...base, judge: { score: 4, reason: "" } },
+      { ...base, judge: { score: 5, reason: "" } },
+      { ...base, judge: { score: null, reason: "bad JSON" } },
+    ];
+    expect(summarize(judged)).toMatchObject({ avgJudgeScore: 4.5, judgedCases: 2 });
+  });
+});

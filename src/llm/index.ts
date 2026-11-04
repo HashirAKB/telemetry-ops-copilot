@@ -8,6 +8,6 @@ export type ProviderName = "auto" | "mock" | "anthropic";
 
 export function createProvider(name: ProviderName = "auto"): LLMProvider {
   if (name === "mock" || (name === "auto" && !config.anthropicApiKey)) return new MockProvider();
-  if (!config.anthropicApiKey) throw new Error("--provider anthropic needs ANTHROPIC_API_KEY (see .env.example)");
+  if (!config.anthropicApiKey) throw new Error("The Anthropic provider (--provider anthropic or --judge) needs ANTHROPIC_API_KEY (see .env.example)");
   return new AnthropicProvider(config.anthropicModel, config.anthropicApiKey);
 }
