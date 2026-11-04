@@ -35,7 +35,7 @@ Telemetry Ops Copilot is an AI operations assistant for an IoT fleet, in TypeScr
 | Misbehaving-model scenarios | Replay of hand-written fixtures |
 | Anthropic API provider | Real code on the official SDK, type-checked; never run against the live API here because there was no network access to LLM APIs |
 | Token counts and cost in mock mode | Estimates (characters / 4, priced as `claude-opus-5-5`) |
-| Docker image | Dockerfile steps checked in a clean copy; the image itself was not built locally (Docker Hub rate limit), and the CI `docker` job builds it |
+| Docker image | Dockerfile steps checked in a clean copy; the image itself was not built locally (Docker Hub rate limit), but the CI `docker` job builds it and runs the demo inside it, and that job passes |
 
 ## Known gaps
 

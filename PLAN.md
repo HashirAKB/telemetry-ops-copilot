@@ -9,7 +9,7 @@ Tick each milestone when its success criterion (see SPEC.md section 7) passes an
 - [x] M4 Tracing (JSONL) + trace viewer + HTTP agent API with approve/deny
 - [x] M5 Evals (25 cases, committed results) + Dockerfile + README, LEARNING, ADRs, SUMMARY
 - [x] M6 React chat + approval page
-- [ ] Final skeptical review pass
+- [x] Final skeptical review pass
 
 ## Blockers
 
