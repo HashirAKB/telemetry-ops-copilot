@@ -3,17 +3,24 @@
 import { config } from "../config";
 import { openSeededDb } from "../data/seed";
 import { createProvider } from "../llm";
+import { openAgentDb } from "./agent-db";
 import { AuditLog } from "./audit";
 import { createAgentApi } from "./http-api";
 import { connectInProcess } from "./mcp-client";
+import { RunStore } from "./run-store";
 
 const mcp = await connectInProcess(openSeededDb(config.dbPath));
+const agentDb = openAgentDb(config.agentDbPath);
+const runs = new RunStore(agentDb);
+const interrupted = runs.markInterrupted();
+if (interrupted) console.warn(`${interrupted} run(s) were interrupted by the last shutdown.`);
 const server = createAgentApi({
   mcp,
   createProvider: () => createProvider("auto"),
   traceDir: "traces",
   apiToken: config.agentApiToken || undefined,
-  audit: new AuditLog(config.auditDbPath),
+  audit: new AuditLog(agentDb),
+  runs,
 });
 server.listen(config.agentPort, () => {
   console.log(`Agent API on http://localhost:${config.agentPort}  (trace viewer: /viewer)`);

@@ -10,6 +10,7 @@ import { config } from "../config";
 import { openSeededDb } from "../data/seed";
 import { createProvider, type ProviderName } from "../llm";
 import { approveAll, CliApprover, denyAll, type Approver } from "./approval";
+import { openAgentDb } from "./agent-db";
 import { AuditLog, withAudit } from "./audit";
 import { formatRun } from "./format";
 import { runAgent } from "./loop";
@@ -34,7 +35,7 @@ if (!question) {
 }
 
 const approvers: Record<string, () => Approver> = { cli: () => new CliApprover(), all: approveAll, none: denyAll };
-const approver = withAudit((approvers[values.approve] ?? approvers.cli!)(), new AuditLog(config.auditDbPath));
+const approver = withAudit((approvers[values.approve] ?? approvers.cli!)(), new AuditLog(openAgentDb(config.agentDbPath)));
 
 const mcp =
   values.transport === "stdio"

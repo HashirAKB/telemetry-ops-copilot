@@ -2,7 +2,7 @@
 // Every value has a safe local default so the project runs with zero setup.
 export const config = {
   dbPath: process.env.DB_PATH ?? "data/fleet.db",
-  auditDbPath: process.env.AUDIT_DB_PATH ?? "data/audit.db", // agent-side approval audit log
+  agentDbPath: process.env.AGENT_DB_PATH ?? "data/agent.db", // agent-side runs + approval audit log
   mcpPort: Number(process.env.MCP_PORT ?? 3001),
   agentPort: Number(process.env.AGENT_PORT ?? 3000),
   // Standard OpenTelemetry variable; when set, traces are also exported via OTLP/HTTP.

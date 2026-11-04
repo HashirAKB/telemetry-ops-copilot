@@ -2,15 +2,13 @@
 //
 // Traces already contain approval spans, but traces are debugging data that
 // may be rotated or deleted. An audit log is a durable record you can query.
-// It lives in the agent's own SQLite file (data/audit.db by default), not in
-// the MCP server's database: the agent should not reach into the server's
-// storage.
+// It lives in the agent's own SQLite file (data/agent.db, see agent-db.ts),
+// not in the MCP server's database: the agent should not reach into the
+// server's storage.
 //
 // `withAudit(approver, log)` wraps any Approver (decorator pattern), so CLI,
 // HTTP and policy approvers all get auditing without changing them.
-import Database from "better-sqlite3";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import type { AgentDb } from "./agent-db";
 import type { ApprovalDecision, ApprovalRequest, Approver } from "./approval";
 
 export interface AuditEntry {
@@ -24,22 +22,7 @@ export interface AuditEntry {
 }
 
 export class AuditLog {
-  private db: Database.Database;
-
-  constructor(path: string) {
-    if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
-    this.db = new Database(path);
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS approval_log (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
-        run_id     TEXT    NOT NULL,
-        tool       TEXT    NOT NULL,
-        args       TEXT    NOT NULL,
-        approved   INTEGER NOT NULL,
-        decided_by TEXT    NOT NULL,
-        decided_at TEXT    NOT NULL
-      )`);
-  }
+  constructor(private db: AgentDb) {}
 
   record(request: ApprovalRequest, decision: ApprovalDecision): void {
     this.db

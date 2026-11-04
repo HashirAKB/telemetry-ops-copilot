@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { approveAll, PolicyApprover } from "../src/agent/approval";
+import { openAgentDb } from "../src/agent/agent-db";
 import { AuditLog } from "../src/agent/audit";
 import { createAgentApi, isAuthorized } from "../src/agent/http-api";
 import { HttpApprover } from "../src/agent/http-approver";
@@ -78,7 +79,7 @@ describe("tracing", () => {
 describe("agent HTTP API with approve/deny", () => {
   it("runs a chat, waits for approvals over HTTP, then finishes", async () => {
     const traceDir = mkdtempSync(join(tmpdir(), "traces-"));
-    const audit = new AuditLog(":memory:");
+    const audit = new AuditLog(openAgentDb(":memory:"));
     const server = createAgentApi({ mcp, createProvider: () => new MockProvider(), traceDir, approver: new HttpApprover(), audit });
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const base = `http://localhost:${(server.address() as AddressInfo).port}`;

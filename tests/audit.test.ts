@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { PolicyApprover } from "../src/agent/approval";
+import { openAgentDb } from "../src/agent/agent-db";
 import { AuditLog, withAudit } from "../src/agent/audit";
 import { HttpApprover } from "../src/agent/http-approver";
 
 describe("approval audit log", () => {
   it("records every decision of the wrapped approver, newest first", async () => {
-    const log = new AuditLog(":memory:");
+    const log = new AuditLog(openAgentDb(":memory:"));
     const approver = withAudit(new PolicyApprover((r) => r.tool === "create_incident"), log);
 
     const first = await approver.approve({ runId: "run-1", tool: "create_incident", args: { device_id: "D-17" } });
@@ -20,7 +21,7 @@ describe("approval audit log", () => {
   });
 
   it("records timeouts as denials", async () => {
-    const log = new AuditLog(":memory:");
+    const log = new AuditLog(openAgentDb(":memory:"));
     await withAudit(new HttpApprover(10), log).approve({ runId: "r", tool: "restart_device", args: {} });
     expect(log.recent()[0]).toMatchObject({ approved: 0, decided_by: "timeout" });
   });

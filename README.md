@@ -138,7 +138,7 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 - The `AnthropicProvider` is type-checked against the official SDK but was not run against the live API while building (no network access to LLM APIs). Mock and replay paths are fully tested.
 - Mock planner understands a fixed set of intents by keywords; questions outside them get a capabilities message.
 - The agent HTTP API supports a bearer token (`AGENT_API_TOKEN`); without it, it is open. The MCP HTTP endpoint has no authentication: local use only.
-- Run state and pending approvals live in memory; restarting the server loses them (decisions already made are kept in the audit log).
+- A run waiting for approval cannot survive a server restart; it is marked `interrupted` (run history and the audit log are persisted in `data/agent.db`).
 - Restarts are simulated (an audit row and a status flag in SQLite).
 - Runbook search is BM25 over words (no synonyms or embeddings): "overheat" finds "overheating", but "too hot" does not.
 - Single-tenant, single SQLite file; no time-series database.
@@ -146,17 +146,17 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 ## What I'd do next
 
 1. **Run the eval suite against a real model** (`npm run eval -- --provider anthropic --judge`), commit `evals/results-anthropic.md`, and tune the system prompt against it.
-2. **Persist runs and pending approvals** (SQLite) so a server restart does not drop a run that is waiting for a human.
-3. **Authorization on the MCP HTTP endpoint** and a server-side write policy, so a host other than this agent cannot skip approval (defence in depth).
-4. **Stream progress to the web page** (Server-Sent Events) instead of polling.
-5. **Semantic runbook search** (embeddings, with BM25 as a hybrid) once there are more than a handful of runbooks.
+2. **Authorization on the MCP HTTP endpoint** and a server-side write policy, so a host other than this agent cannot skip approval (defence in depth).
+3. **Stream progress to the web page** (Server-Sent Events) instead of polling.
+4. **Semantic runbook search** (embeddings, with BM25 as a hybrid) once there are more than a handful of runbooks.
 
 ### Done after the first release
 
 These were the original "next" items; each is implemented with tests in its own commit:
 
 - Bearer-token auth on the agent HTTP API (`AGENT_API_TOKEN`); the web page and trace viewer ask for the token.
-- Approval audit log in SQLite (`data/audit.db`, `GET /api/audit`) for CLI and HTTP decisions.
+- Approval audit log in SQLite (`data/agent.db`, `GET /api/audit`) for CLI and HTTP decisions.
+- Run history in SQLite (`data/agent.db`): finished runs survive a restart; runs cut off by a restart are marked `interrupted` instead of hanging forever.
 - BM25 runbook ranking (IDF, term saturation, length normalisation).
 - OTLP/HTTP JSON trace export (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 - Real-model eval mode with an LLM-as-judge (`--judge`); code and offline tests only, not run live.

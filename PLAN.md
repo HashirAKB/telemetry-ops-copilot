@@ -19,6 +19,11 @@ Tick each milestone when its success criterion (see SPEC.md section 7) passes an
 - [x] 4. OTLP export of spans
 - [x] 5. Real-model eval mode with LLM-as-judge (code + tests; not run live, no API access)
 
+## Second round of next items (README)
+
+- [ ] 1. Real-model eval run (blocked: needs ANTHROPIC_API_KEY; no LLM API access here)
+- [x] 2. Persist runs in SQLite; mark runs cut off by a restart as interrupted
+
 ## Blockers
 
 _None._

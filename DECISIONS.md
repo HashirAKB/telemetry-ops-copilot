@@ -101,3 +101,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D25. LLM-as-judge is real-model only, reported but never gating
 - **Alternatives:** a mock judge; gate CI on judge score.
 - **Why:** a mock judge would only grade the mock against itself. Judge scores vary between runs and judges have known biases, so they sit next to the deterministic metrics instead of replacing them. Malformed verdicts become "n/a" rather than a guessed score. Tested offline with replayed judge responses.
+
+## D26. Persist runs, but mark runs cut off by a restart as "interrupted" instead of resuming them
+- **Alternatives:** keep runs in memory; persist the whole conversation and resume after restart.
+- **Why:** a waiting run is a Promise inside the process; resuming would mean persisting the message history, the pending approval and re-entering the loop mid-step, which is a durable-execution engine, out of scope. Marking them interrupted gives clients a truthful final state. Runs and the audit log share one agent-side DB (`data/agent.db`, renamed from `audit.db`).

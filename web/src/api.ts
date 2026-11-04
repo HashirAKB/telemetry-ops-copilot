@@ -19,7 +19,7 @@ export interface RunResult {
 export interface RunState {
   id: string;
   question: string;
-  status: "running" | "done";
+  status: "running" | "done" | "interrupted";
   result?: RunResult;
   error?: string;
 }

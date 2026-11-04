@@ -1,7 +1,7 @@
 // HTTP API for the agent (used by the React page and by curl).
 //
 //   POST /api/chat                 {"message": "..."}  -> 202 {"runId"}
-//   GET  /api/runs/:id             -> {"status": "running" | "done", "result"?}
+//   GET  /api/runs/:id             -> {"status": "running" | "done" | "interrupted", "result"?}
 //   GET  /api/approvals            -> pending approvals
 //   POST /api/approvals/:id        {"approved": true|false} -> 200 | 404
 //   GET  /api/traces/:id           -> the run's spans (JSONL)
@@ -26,9 +26,11 @@ import type { LLMProvider } from "../llm/types";
 import { readJson } from "../server/http";
 import { defaultSink } from "../telemetry/otlp";
 import { Tracer } from "../telemetry/tracer";
+import { openAgentDb } from "./agent-db";
 import { withAudit, type AuditLog } from "./audit";
 import { HttpApprover } from "./http-approver";
-import { runAgent, type RunResult } from "./loop";
+import { runAgent } from "./loop";
+import { RunStore } from "./run-store";
 
 export interface AgentApiOptions {
   mcp: Client;
@@ -38,14 +40,7 @@ export interface AgentApiOptions {
   webDir?: string; // built React app
   apiToken?: string; // if set, required as a bearer token on /api/*
   audit?: AuditLog; // if set, every approval decision is recorded
-}
-
-interface RunState {
-  id: string;
-  question: string;
-  status: "running" | "done";
-  result?: RunResult;
-  error?: string;
+  runs?: RunStore; // default: an in-memory store (lost on restart)
 }
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -67,7 +62,7 @@ export function createAgentApi(options: AgentApiOptions): Server {
   const approver = options.approver ?? new HttpApprover();
   const runApprover = options.audit ? withAudit(approver, options.audit) : approver;
   const tracer = new Tracer(defaultSink(options.traceDir));
-  const runs = new Map<string, RunState>();
+  const runs = options.runs ?? new RunStore(openAgentDb(":memory:"));
   const webDir = options.webDir ?? join(ROOT, "web/dist");
 
   return createServer(async (req, res) => {
@@ -82,12 +77,11 @@ export function createAgentApi(options: AgentApiOptions): Server {
         const message = typeof body?.message === "string" ? body.message.trim() : "";
         if (!message || message.length > 2000) return send(res, 400, { error: "message must be 1-2000 characters" });
         const id = randomUUID();
-        const state: RunState = { id, question: message, status: "running" };
-        runs.set(id, state);
+        runs.create(id, message);
         // Fire and forget; the client polls for the result.
         runAgent(message, { provider: options.createProvider(), mcp: options.mcp, approver: runApprover, tracer, runId: id })
-          .then((result) => Object.assign(state, { status: "done", result }))
-          .catch((err: Error) => Object.assign(state, { status: "done", error: err.message }));
+          .then((result) => runs.finish(id, { result }))
+          .catch((err: Error) => runs.finish(id, { error: err.message }));
         return send(res, 202, { runId: id });
       }
 
