@@ -1,0 +1,30 @@
+{
+  "name": "telemetry-ops-copilot",
+  "version": "0.1.0",
+  "description": "AI operations assistant for an IoT device fleet: MCP server + hand-written agent loop with guardrails, tracing and evals.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.14.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "better-sqlite3": "^13.0.3",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.7"
+  }
+}
