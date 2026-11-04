@@ -73,3 +73,11 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D18. Viewer screenshot uses `playwright-core` pinned to the pre-installed browser version
 - **Alternatives:** full `playwright` package (downloads browsers).
 - **Why:** no browser download needed; dev-only script, not part of CI.
+
+## D19. React page built with Vite into `web/dist`, served by the agent API
+- **Alternatives:** separate `web/package.json` workspace; React from a CDN without a build.
+- **Why:** one `npm install` for everything; the agent API already serves static files, so no extra server or CORS. React and Vite are dev dependencies only (the built bundle is static).
+
+## D20. The browser e2e test is a script, not a vitest test
+- **Alternatives:** run it inside `npm test`.
+- **Why:** it needs Chromium; keeping it out of `npm test` keeps unit tests runnable anywhere. CI runs it in its own job after installing Chromium.

@@ -56,6 +56,7 @@ The agent will ask `Approve? [y/N]` in the terminal before the restart. Other en
 | `npm run mcp:stdio` / `npm run mcp:http` | The MCP server on its own ([Claude Desktop setup](docs/claude-desktop.md)) |
 | `npm run eval` | Run the 25 eval cases, write `evals/results.{json,md}` |
 | `npm test` | Unit and integration tests |
+| `npm run test:e2e` | Browser test of the React page (needs `npm run web:build` and Chromium) |
 | `docker build -t telemetry-ops-copilot . && docker run -p 3000:3000 telemetry-ops-copilot` | Containerised API |
 
 ## Demo output
@@ -96,6 +97,12 @@ I did not restart them: the Low battery runbook says restarting does not help an
 Each run writes a trace to `traces/<runId>.jsonl`. Open `viewer/index.html` and pick the file:
 
 ![Trace viewer showing LLM calls, tool calls and a denied approval](docs/trace-viewer.png)
+
+### Web page
+
+`npm run web:build && npm run serve`, then open http://localhost:3000. Write actions show up as approval cards; the run continues once you click Approve or Deny.
+
+![React page with a pending restart_device approval](docs/web-ui-approval.png)
 
 ## Eval results
 

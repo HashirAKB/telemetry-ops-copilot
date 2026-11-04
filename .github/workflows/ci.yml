@@ -23,6 +23,19 @@ jobs:
       - run: npm run eval -- --check
       - run: git diff --exit-code evals/results.json evals/results.md
 
+  web-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run web:build
+      - run: npm run test:e2e
+
   docker:
     runs-on: ubuntu-latest
     steps:
