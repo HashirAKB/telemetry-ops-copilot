@@ -9,9 +9,14 @@
 //   GET  /                         -> React chat page (if built into web/dist)
 //
 // Runs are asynchronous: a run may be waiting for a human approval, so the
-// client polls /api/runs/:id. No authentication: local use only.
+// client polls /api/runs/:id.
+//
+// Authentication: when `apiToken` is set, every /api/* request must send
+// "Authorization: Bearer <token>". Otherwise anyone who can reach the port
+// could approve a restart. Static pages (/, /viewer) stay public; they hold
+// no data and ask for the token themselves.
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { createServer, type ServerResponse, type Server } from "node:http";
 import { extname, join, normalize, sep } from "node:path";
@@ -28,6 +33,7 @@ export interface AgentApiOptions {
   traceDir: string;
   approver?: HttpApprover;
   webDir?: string; // built React app
+  apiToken?: string; // if set, required as a bearer token on /api/*
 }
 
 interface RunState {
@@ -40,6 +46,13 @@ interface RunState {
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const MIME: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" };
+
+/** Constant-time comparison so the token cannot be guessed byte by byte from response timing. */
+export function isAuthorized(header: string | undefined, token: string): boolean {
+  const expected = Buffer.from(`Bearer ${token}`);
+  const actual = Buffer.from(header ?? "");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
 
 function send(res: ServerResponse, status: number, body: unknown, type = "application/json") {
   res.writeHead(status, { "Content-Type": type });
@@ -56,6 +69,9 @@ export function createAgentApi(options: AgentApiOptions): Server {
     const url = new URL(req.url ?? "/", "http://localhost");
     const path = url.pathname;
     try {
+      if (options.apiToken && path.startsWith("/api/") && !isAuthorized(req.headers.authorization, options.apiToken)) {
+        return send(res, 401, { error: "missing or invalid bearer token" });
+      }
       if (req.method === "POST" && path === "/api/chat") {
         const body = (await readJson(req)) as { message?: unknown } | undefined;
         const message = typeof body?.message === "string" ? body.message.trim() : "";

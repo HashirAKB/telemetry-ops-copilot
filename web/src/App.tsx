@@ -2,7 +2,7 @@
 // State lives in two polling loops: one for runs in progress, one for
 // pending approvals. Simple and good enough for a local operator console.
 import { useEffect, useState, type FormEvent } from "react";
-import { api, type PendingApproval, type RunState } from "./api";
+import { api, setToken, UnauthorizedError, type PendingApproval, type RunState } from "./api";
 
 const EXAMPLES = ["Why is D-17 alerting?", "Which devices have low battery?", "Open an incident for D-17 and restart it"];
 
@@ -11,6 +11,7 @@ export function App() {
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
+  const [needsToken, setNeedsToken] = useState(false);
 
   // Poll runs that are still running, and the pending approvals.
   useEffect(() => {
@@ -23,8 +24,10 @@ export function App() {
           setRuns((all) => all.map((r) => updated.find((u) => u.id === r.id) ?? r));
         }
         setError("");
+        setNeedsToken(false);
       } catch (err) {
-        setError(`Cannot reach the agent API: ${(err as Error).message}`);
+        if (err instanceof UnauthorizedError) setNeedsToken(true);
+        else setError(`Cannot reach the agent API: ${(err as Error).message}`);
       }
     }, 700);
     return () => clearInterval(timer);
@@ -57,6 +60,21 @@ export function App() {
         <h1>Ops Copilot</h1>
         <p>Ask about the fleet. Write actions wait for your approval.</p>
       </header>
+
+      {needsToken && (
+        <form
+          className="token"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const value = new FormData(e.currentTarget).get("token");
+            setToken(String(value ?? ""));
+            setNeedsToken(false);
+          }}
+        >
+          <input name="token" type="password" aria-label="API token" placeholder="API token (AGENT_API_TOKEN)" />
+          <button type="submit">Save</button>
+        </form>
+      )}
 
       {approvals.length > 0 && (
         <section className="approvals" aria-label="Pending approvals">

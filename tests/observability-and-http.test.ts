@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { approveAll, PolicyApprover } from "../src/agent/approval";
-import { createAgentApi } from "../src/agent/http-api";
+import { createAgentApi, isAuthorized } from "../src/agent/http-api";
 import { HttpApprover } from "../src/agent/http-approver";
 import { runAgent } from "../src/agent/loop";
 import { connectInProcess } from "../src/agent/mcp-client";
@@ -133,5 +133,30 @@ describe("agent HTTP API with approve/deny", () => {
     const decision = await approver.approve({ runId: "r", tool: "restart_device", args: {} });
     expect(decision).toEqual({ approved: false, by: "timeout" });
     expect(approver.list()).toEqual([]);
+  });
+});
+
+describe("agent HTTP API authentication", () => {
+  it("requires the bearer token on /api/* when configured, but serves static pages", async () => {
+    const traceDir = mkdtempSync(join(tmpdir(), "traces-"));
+    const server = createAgentApi({ mcp, createProvider: () => new MockProvider(), traceDir, apiToken: "s3cret" });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const base = `http://localhost:${(server.address() as AddressInfo).port}`;
+    try {
+      expect((await fetch(`${base}/api/approvals`)).status).toBe(401);
+      expect((await fetch(`${base}/api/approvals`, { headers: { Authorization: "Bearer wrong" } })).status).toBe(401);
+      const chat = await fetch(`${base}/api/chat`, { method: "POST", body: JSON.stringify({ message: "Restart D-33" }) });
+      expect(chat.status).toBe(401);
+      expect((await fetch(`${base}/api/approvals`, { headers: { Authorization: "Bearer s3cret" } })).status).toBe(200);
+      expect((await fetch(`${base}/viewer`)).status).toBe(200);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("isAuthorized compares the whole header", () => {
+    expect(isAuthorized("Bearer abc", "abc")).toBe(true);
+    expect(isAuthorized("Bearer abcd", "abc")).toBe(false);
+    expect(isAuthorized(undefined, "abc")).toBe(false);
   });
 });

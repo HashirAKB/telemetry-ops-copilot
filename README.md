@@ -136,7 +136,7 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 
 - The `AnthropicProvider` is type-checked against the official SDK but was not run against the live API while building (no network access to LLM APIs). Mock and replay paths are fully tested.
 - Mock planner understands a fixed set of intents by keywords; questions outside them get a capabilities message.
-- No authentication on the HTTP API or the MCP HTTP endpoint: local use only.
+- The agent HTTP API supports a bearer token (`AGENT_API_TOKEN`); without it, it is open. The MCP HTTP endpoint has no authentication: local use only.
 - Run state and pending approvals live in memory; restarting the server loses them.
 - Restarts are simulated (an audit row and a status flag in SQLite).
 - Runbook search is keyword counting, fine for six documents, not for thousands.
@@ -144,7 +144,7 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 
 ## What I'd do next
 
-1. **Authenticate the HTTP API** with a bearer token from the environment, so approvals cannot be granted by anyone who can reach the port.
+1. ~~**Authenticate the HTTP API** with a bearer token from the environment, so approvals cannot be granted by anyone who can reach the port.~~ Done: set `AGENT_API_TOKEN`; the React page and trace viewer ask for it.
 2. **Persist an approval audit log** (who approved what, when, for which run) in SQLite instead of only in traces.
 3. **BM25 ranking for runbook search**, with document-length normalisation and IDF so common words stop dominating.
 4. **OTLP export** of the same spans, so traces can go to Jaeger, Grafana Tempo or Honeycomb.

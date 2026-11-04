@@ -128,10 +128,13 @@
     if (file) render(await file.text());
   });
 
-  // When served by the agent API: /viewer?trace=<runId>
-  const traceId = new URLSearchParams(location.search).get("trace");
+  // When served by the agent API: /viewer?trace=<runId>[&token=<API token>]
+  const params = new URLSearchParams(location.search);
+  const traceId = params.get("trace");
+  let token = params.get("token");
+  try { token = token || localStorage.getItem("ops-copilot-token"); } catch { /* storage unavailable */ }
   if (traceId) {
-    fetch(`/api/traces/${encodeURIComponent(traceId)}`)
+    fetch(`/api/traces/${encodeURIComponent(traceId)}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then(render)
       .catch((err) => { out.innerHTML = `<p class="empty">Could not load trace: ${esc(err.message)}</p>`; });

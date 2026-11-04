@@ -46,6 +46,22 @@ try {
     throw new Error(`Unexpected outcome: incidents=${incidents} restarts=${restarts} answer=${text}`);
   }
   console.log("E2E passed: incident approved and created, restart denied and not performed.");
+
+  // Second scenario: the API requires a token; the page asks for it.
+  const secured = createAgentApi({ mcp, createProvider: () => new MockProvider(), traceDir: "traces", apiToken: "e2e-token" });
+  await new Promise<void>((resolve) => secured.listen(0, resolve));
+  try {
+    const page2 = await browser.newPage();
+    await page2.goto(`http://localhost:${(secured.address() as AddressInfo).port}`);
+    await page2.getByLabel("API token").fill("e2e-token");
+    await page2.getByRole("button", { name: "Save" }).click();
+    await page2.getByLabel("Message").fill("Why is D-17 alerting?");
+    await page2.getByRole("button", { name: "Send" }).click();
+    await page2.getByTestId("answer").waitFor();
+    console.log("E2E passed: token prompt shown, token accepted, chat works with auth.");
+  } finally {
+    secured.close();
+  }
 } finally {
   await browser.close();
   server.close();

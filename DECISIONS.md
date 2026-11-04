@@ -81,3 +81,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D20. The browser e2e test is a script, not a vitest test
 - **Alternatives:** run it inside `npm test`.
 - **Why:** it needs Chromium; keeping it out of `npm test` keeps unit tests runnable anywhere. CI runs it in its own job after installing Chromium.
+
+## D21. Optional bearer token on /api/*, constant-time compare, static pages public
+- **Alternatives:** always require a token (breaks the zero-setup quickstart); sessions/cookies; mTLS.
+- **Why:** one env var gives real protection for approvals; unset keeps local dev frictionless but the server prints a warning. Static pages hold no data, so they stay public and ask for the token. The page keeps it in localStorage so the trace viewer tab can reuse it.
