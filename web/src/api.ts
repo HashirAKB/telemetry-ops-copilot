@@ -68,7 +68,42 @@ const post = (path: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
+/** The fields of a trace span the page shows as live progress. */
+export interface ProgressSpan {
+  name: string;
+  kind: "agent" | "llm" | "tool" | "approval";
+  status: "ok" | "error";
+  attributes: Record<string, string | number | boolean>;
+}
+
+/**
+ * Read the run's Server-Sent Events stream with fetch (not EventSource,
+ * which cannot send an Authorization header). Resolves when the run is done.
+ */
+async function streamRun(id: string, onSpan: (span: ProgressSpan) => void): Promise<void> {
+  const response = await get(`/api/runs/${id}/events`);
+  if (response.status === 401) throw new UnauthorizedError("API token required");
+  if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buffer += value;
+    // Events are separated by a blank line: "event: span\ndata: {...}\n\n"
+    let end;
+    while ((end = buffer.indexOf("\n\n")) !== -1) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      const event = block.match(/^event: (.*)$/m)?.[1];
+      const data = block.match(/^data: (.*)$/m)?.[1];
+      if (event === "span" && data) onSpan(JSON.parse(data) as ProgressSpan);
+    }
+  }
+}
+
 export const api = {
+  streamRun,
   startRun: async (message: string) => json<{ runId: string }>(await post("/api/chat", { message })),
   getRun: async (id: string) => json<RunState>(await get(`/api/runs/${id}`)),
   listApprovals: async () => json<PendingApproval[]>(await get("/api/approvals")),

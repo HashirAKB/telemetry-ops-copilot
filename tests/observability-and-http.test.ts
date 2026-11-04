@@ -170,3 +170,44 @@ describe("agent HTTP API authentication", () => {
     expect(isAuthorized(undefined, "abc")).toBe(false);
   });
 });
+
+describe("live run progress (Server-Sent Events)", () => {
+  it("streams spans as they finish, then a done event after the result is saved", async () => {
+    const traceDir = mkdtempSync(join(tmpdir(), "traces-"));
+    const approver = new HttpApprover();
+    const server = createAgentApi({ mcp, createProvider: () => new MockProvider(), traceDir, approver });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const base = `http://localhost:${(server.address() as AddressInfo).port}`;
+    try {
+      const { runId } = await (await fetch(`${base}/api/chat`, { method: "POST", body: JSON.stringify({ message: "Restart D-33" }) })).json();
+      const stream = await fetch(`${base}/api/runs/${runId}/events`);
+      expect(stream.headers.get("content-type")).toBe("text/event-stream");
+
+      // Deny the restart once it is requested, while the stream is open.
+      const deny = (async () => {
+        for (let i = 0; i < 200 && approver.list().length === 0; i++) await new Promise((r) => setTimeout(r, 10));
+        approver.settle(approver.list()[0]!.id, { approved: false, by: "test" });
+      })();
+
+      const text = await stream.text(); // resolves when the server closes the stream
+      await deny;
+      const events = text.trim().split("\n\n").map((block) => {
+        const [eventLine, dataLine] = block.split("\n");
+        return { event: eventLine!.slice("event: ".length), data: JSON.parse(dataLine!.slice("data: ".length)) };
+      });
+      const names = events.filter((e) => e.event === "span").map((e) => e.data.name);
+      expect(names).toContain("llm.complete");
+      expect(names).toContain("approval");
+      expect(names.at(-1)).toBe("agent.run");
+      expect(events.at(-1)!.event).toBe("done");
+
+      // After "done" the saved result is available immediately.
+      expect((await (await fetch(`${base}/api/runs/${runId}`)).json()).status).toBe("done");
+      // A finished run's stream closes at once; unknown runs are 404.
+      expect(await (await fetch(`${base}/api/runs/${runId}/events`)).text()).toContain("event: done");
+      expect((await fetch(`${base}/api/runs/nope/events`)).status).toBe(404);
+    } finally {
+      server.close();
+    }
+  });
+});

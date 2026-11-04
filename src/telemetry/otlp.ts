@@ -6,7 +6,7 @@
 // (the root always ends last). Export failures are logged and swallowed: an
 // unreachable collector must never break an agent run.
 import { config } from "../config";
-import { jsonlSink, type AttributeValue, type Span, type SpanKind, type SpanSink } from "./tracer";
+import { jsonlSink, multiSink, type AttributeValue, type Span, type SpanKind, type SpanSink } from "./tracer";
 
 const SERVICE_NAME = "telemetry-ops-copilot";
 
@@ -89,11 +89,6 @@ export function otlpSink(endpoint: string): SpanSink & { flush(): Promise<void> 
     inFlight.add(request);
   };
   return Object.assign(sink, { flush: async () => void (await Promise.all(inFlight)) });
-}
-
-/** Send every span to several sinks (e.g. JSONL file + OTLP). */
-export function multiSink(...sinks: SpanSink[]): SpanSink {
-  return (span) => sinks.forEach((sink) => sink(span));
 }
 
 /** Default sink for the CLI and server: JSONL files, plus OTLP when OTEL_EXPORTER_OTLP_ENDPOINT is set. */

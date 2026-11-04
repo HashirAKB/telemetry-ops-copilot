@@ -29,6 +29,8 @@ try {
 
   const approvals = page.getByLabel("Pending approvals");
   await approvals.getByText("create_incident").waitFor();
+  // Live progress (streamed spans) is visible while the run waits for us.
+  await page.getByLabel("Progress").getByText("detect_anomalies: ok").waitFor();
   await approvals.getByRole("button", { name: "Approve" }).click();
 
   await approvals.getByText("restart_device").waitFor();

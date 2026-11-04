@@ -24,6 +24,7 @@ Tick each milestone when its success criterion (see SPEC.md section 7) passes an
 - [ ] 1. Real-model eval run (blocked: needs ANTHROPIC_API_KEY; no LLM API access here)
 - [x] 2. Persist runs in SQLite; mark runs cut off by a restart as interrupted
 - [x] 3. MCP HTTP bearer token + read-only server mode
+- [x] 4. Live run progress over Server-Sent Events
 
 ## Blockers
 

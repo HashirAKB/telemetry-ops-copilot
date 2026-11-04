@@ -92,3 +92,8 @@ export function jsonlSink(dir: string): SpanSink {
 export function memorySink(spans: Span[]): SpanSink {
   return (span) => spans.push(span);
 }
+
+/** Send every span to several sinks (e.g. JSONL file + OTLP + live stream). */
+export function multiSink(...sinks: SpanSink[]): SpanSink {
+  return (span) => sinks.forEach((sink) => sink(span));
+}

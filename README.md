@@ -101,7 +101,7 @@ Each run writes a trace to `traces/<runId>.jsonl`. Open `viewer/index.html` and 
 
 ### Web page
 
-`npm run web:build && npm run serve`, then open http://localhost:3000. Write actions show up as approval cards; the run continues once you click Approve or Deny.
+`npm run web:build && npm run serve`, then open http://localhost:3000. Each LLM call, tool call and approval appears live as it finishes (Server-Sent Events). Write actions show up as approval cards; the run continues once you click Approve or Deny.
 
 ![React page with a pending restart_device approval](docs/web-ui-approval.png)
 
@@ -146,8 +146,7 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 ## What I'd do next
 
 1. **Run the eval suite against a real model** (`npm run eval -- --provider anthropic --judge`), commit `evals/results-anthropic.md`, and tune the system prompt against it.
-2. **Stream progress to the web page** (Server-Sent Events) instead of polling.
-3. **Semantic runbook search** (embeddings, with BM25 as a hybrid) once there are more than a handful of runbooks.
+2. **Semantic runbook search** (embeddings, with BM25 as a hybrid) once there are more than a handful of runbooks.
 
 ### Done after the first release
 
@@ -155,6 +154,7 @@ These were the original "next" items; each is implemented with tests in its own 
 
 - Bearer-token auth on the agent HTTP API (`AGENT_API_TOKEN`); the web page and trace viewer ask for the token.
 - Approval audit log in SQLite (`data/agent.db`, `GET /api/audit`) for CLI and HTTP decisions.
+- Live run progress: `GET /api/runs/:id/events` streams trace spans as Server-Sent Events; the web page shows each LLM call, tool call and approval as it happens.
 - MCP HTTP endpoint hardening: optional bearer token (`MCP_API_TOKEN`) and a read-only mode (`MCP_READ_ONLY=1`) in which the write tools are not registered at all.
 - Run history in SQLite (`data/agent.db`): finished runs survive a restart; runs cut off by a restart are marked `interrupted` instead of hanging forever.
 - BM25 runbook ranking (IDF, term saturation, length normalisation).

@@ -109,3 +109,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D27. Server-side defence in depth: bearer token on MCP HTTP, and a read-only mode that omits write tools
 - **Alternatives:** server-side approval queue; per-tool scopes in the token.
 - **Why:** the strongest guarantee for a host that should not write is that write tools do not exist on its server. A shared bearer token is the minimum for a network endpoint; scoped tokens (OAuth, as the MCP spec describes for remote servers) are the production step after this.
+
+## D28. Live progress = trace spans forwarded over Server-Sent Events, read with fetch
+- **Alternatives:** WebSockets; a separate progress callback in the agent loop; browser `EventSource`.
+- **Why:** spans already describe every step, so a sink that forwards them needs no change to the loop. SSE is one-way and plain HTTP, which is all progress needs. `EventSource` cannot send an `Authorization` header, so the page reads the stream with `fetch`. Spans are buffered per run so late subscribers catch up; `done` is sent only after the result is saved, so a follow-up `GET /api/runs/:id` never sees a stale state.

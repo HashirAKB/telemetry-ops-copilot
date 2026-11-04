@@ -1,28 +1,34 @@
 // Chat with the agent and approve or deny its pending write actions.
-// State lives in two polling loops: one for runs in progress, one for
-// pending approvals. Simple and good enough for a local operator console.
+// Each run's progress is streamed live (Server-Sent Events); pending
+// approvals are polled. Simple and good enough for a local operator console.
 import { useEffect, useState, type FormEvent } from "react";
-import { api, setToken, UnauthorizedError, type PendingApproval, type RunState } from "./api";
+import { api, setToken, UnauthorizedError, type PendingApproval, type ProgressSpan, type RunState } from "./api";
 
 const EXAMPLES = ["Why is D-17 alerting?", "Which devices have low battery?", "Open an incident for D-17 and restart it"];
 
+/** One line of live progress for a finished span (agent.run itself is skipped). */
+function describeSpan(span: ProgressSpan): string | null {
+  const a = span.attributes;
+  if (span.kind === "llm") return `LLM call #${a["agent.step"]} -> ${a["gen_ai.response.finish_reason"]}`;
+  if (span.kind === "tool") return `${a["tool.name"]}: ${a["tool.status"]}`;
+  if (span.kind === "approval") return `approval: ${a["approval.approved"] ? "approved" : "denied"} by ${a["approval.by"]}`;
+  return null;
+}
+
+type Run = RunState & { progress: string[] };
+
 export function App() {
-  const [runs, setRuns] = useState<RunState[]>([]);
+  const [runs, setRuns] = useState<Run[]>([]);
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const [needsToken, setNeedsToken] = useState(false);
 
-  // Poll runs that are still running, and the pending approvals.
+  // Poll the pending approvals.
   useEffect(() => {
     const timer = setInterval(async () => {
       try {
         setApprovals(await api.listApprovals());
-        const running = runs.filter((r) => r.status === "running");
-        if (running.length) {
-          const updated = await Promise.all(running.map((r) => api.getRun(r.id)));
-          setRuns((all) => all.map((r) => updated.find((u) => u.id === r.id) ?? r));
-        }
         setError("");
         setNeedsToken(false);
       } catch (err) {
@@ -31,14 +37,31 @@ export function App() {
       }
     }, 700);
     return () => clearInterval(timer);
-  }, [runs]);
+  }, []);
+
+  const update = (id: string, change: (run: Run) => Run) => setRuns((all) => all.map((r) => (r.id === id ? change(r) : r)));
+
+  /** Show progress live, then load the saved result. */
+  async function follow(id: string) {
+    try {
+      await api.streamRun(id, (span) => {
+        const line = describeSpan(span);
+        if (line) update(id, (r) => ({ ...r, progress: [...r.progress, line] }));
+      });
+      const final = await api.getRun(id);
+      update(id, (r) => ({ ...r, ...final }));
+    } catch (err) {
+      update(id, (r) => ({ ...r, status: "done", error: (err as Error).message }));
+    }
+  }
 
   async function send(message: string) {
     if (!message.trim()) return;
     setInput("");
     try {
       const { runId } = await api.startRun(message.trim());
-      setRuns((all) => [...all, { id: runId, question: message.trim(), status: "running" }]);
+      setRuns((all) => [...all, { id: runId, question: message.trim(), status: "running", progress: [] }]);
+      void follow(runId);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -111,7 +134,14 @@ export function App() {
         {runs.map((run) => (
           <article key={run.id}>
             <p className="question">{run.question}</p>
-            {run.status === "running" && <p className="muted">Working...</p>}
+            {run.status === "running" && (
+              <ul className="progress" aria-label="Progress">
+                {run.progress.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+                <li className="muted">working...</li>
+              </ul>
+            )}
             {run.error && <p className="error">{run.error}</p>}
             {run.result && (
               <div className="answer">

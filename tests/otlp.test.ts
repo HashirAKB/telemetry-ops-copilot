@@ -1,8 +1,8 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
-import { multiSink, otlpSink, toOtlp } from "../src/telemetry/otlp";
-import { memorySink, Tracer, type Span } from "../src/telemetry/tracer";
+import { otlpSink, toOtlp } from "../src/telemetry/otlp";
+import { memorySink, multiSink, Tracer, type Span } from "../src/telemetry/tracer";
 
 const TRACE_ID = "3111dee4-e5d6-4f06-a628-262e9db50573";
 

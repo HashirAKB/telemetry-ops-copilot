@@ -2,6 +2,7 @@
 //
 //   POST /api/chat                 {"message": "..."}  -> 202 {"runId"}
 //   GET  /api/runs/:id             -> {"status": "running" | "done" | "interrupted", "result"?}
+//   GET  /api/runs/:id/events      -> live progress (Server-Sent Events: "span" events, then "done")
 //   GET  /api/approvals            -> pending approvals
 //   POST /api/approvals/:id        {"approved": true|false} -> 200 | 404
 //   GET  /api/traces/:id           -> the run's spans (JSONL)
@@ -9,8 +10,8 @@
 //   GET  /viewer                   -> static trace viewer
 //   GET  /                         -> React chat page (if built into web/dist)
 //
-// Runs are asynchronous: a run may be waiting for a human approval, so the
-// client polls /api/runs/:id.
+// Runs are asynchronous: a run may be waiting for a human approval. Clients
+// stream /api/runs/:id/events (or poll /api/runs/:id) and fetch the result.
 //
 // Authentication: when `apiToken` is set, every /api/* request must send
 // "Authorization: Bearer <token>". Otherwise anyone who can reach the port
@@ -25,10 +26,11 @@ import { fileURLToPath } from "node:url";
 import type { LLMProvider } from "../llm/types";
 import { isAuthorized, readJson } from "../server/http";
 import { defaultSink } from "../telemetry/otlp";
-import { Tracer } from "../telemetry/tracer";
+import { multiSink, Tracer } from "../telemetry/tracer";
 import { openAgentDb } from "./agent-db";
 import { withAudit, type AuditLog } from "./audit";
 import { HttpApprover } from "./http-approver";
+import { closeStream, LiveRuns } from "./live-runs";
 import { runAgent } from "./loop";
 import { RunStore } from "./run-store";
 
@@ -54,7 +56,8 @@ function send(res: ServerResponse, status: number, body: unknown, type = "applic
 export function createAgentApi(options: AgentApiOptions): Server {
   const approver = options.approver ?? new HttpApprover();
   const runApprover = options.audit ? withAudit(approver, options.audit) : approver;
-  const tracer = new Tracer(defaultSink(options.traceDir));
+  const live = new LiveRuns();
+  const tracer = new Tracer(multiSink(defaultSink(options.traceDir), live.sink));
   const runs = options.runs ?? new RunStore(openAgentDb(":memory:"));
   const webDir = options.webDir ?? join(ROOT, "web/dist");
 
@@ -71,11 +74,21 @@ export function createAgentApi(options: AgentApiOptions): Server {
         if (!message || message.length > 2000) return send(res, 400, { error: "message must be 1-2000 characters" });
         const id = randomUUID();
         runs.create(id, message);
-        // Fire and forget; the client polls for the result.
+        live.start(id);
+        // Fire and forget; the client streams progress or polls for the result.
         runAgent(message, { provider: options.createProvider(), mcp: options.mcp, approver: runApprover, tracer, runId: id })
           .then((result) => runs.finish(id, { result }))
-          .catch((err: Error) => runs.finish(id, { error: err.message }));
+          .catch((err: Error) => runs.finish(id, { error: err.message }))
+          .finally(() => live.finish(id)); // after the result is saved
         return send(res, 202, { runId: id });
+      }
+
+      const eventsMatch = path.match(/^\/api\/runs\/([\w-]+)\/events$/);
+      if (req.method === "GET" && eventsMatch) {
+        const id = eventsMatch[1]!;
+        if (live.watch(id, res)) return;
+        if (!runs.get(id)) return send(res, 404, { error: "unknown run" });
+        return closeStream(res); // already finished: nothing to stream
       }
 
       const runMatch = path.match(/^\/api\/runs\/([\w-]+)$/);
