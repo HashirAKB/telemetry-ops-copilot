@@ -15,7 +15,7 @@ Tick each milestone when its success criterion (see SPEC.md section 7) passes an
 
 - [x] 1. Bearer-token auth on the agent HTTP API
 - [x] 2. Approval audit log in SQLite
-- [ ] 3. BM25 runbook ranking
+- [x] 3. BM25 runbook ranking
 - [ ] 4. OTLP export of spans
 - [ ] 5. Real-model eval mode with LLM-as-judge
 

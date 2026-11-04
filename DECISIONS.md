@@ -89,3 +89,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D22. Approval audit log as a decorator, in the agent's own SQLite file
 - **Alternatives:** write approvals into the fleet database; rely on traces only.
 - **Why:** the agent talks to the server only through MCP, so it should not write into the server's database. A decorator (`withAudit`) adds auditing to every approver type without touching them. Traces can be rotated; an audit log is the durable record.
+
+## D23. BM25 instead of term counting for runbook search; no embeddings
+- **Alternatives:** keep term counts; embeddings with a vector index.
+- **Why:** a test showed term counting ranks a document that repeats a common word above the one with the rare, relevant word. BM25 fixes that in about 30 lines with no dependencies or model downloads. Embeddings would add synonym matching but need a model, which is overkill for six documents and impossible offline here.

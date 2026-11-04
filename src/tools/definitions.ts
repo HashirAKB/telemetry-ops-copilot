@@ -40,7 +40,7 @@ export const TOOLS = {
   },
   search_runbooks: {
     access: "read",
-    description: "Keyword search over operations runbooks. Returns the best matches (full text) and a runbook:// URI.",
+    description: "BM25 keyword search over operations runbooks. Returns the best matches (full text) and a runbook:// URI.",
     schema: z.object({ query: z.string().min(2).max(200) }),
   },
   create_incident: {

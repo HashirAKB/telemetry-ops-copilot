@@ -66,7 +66,10 @@ Unit tests check functions; **evals** check behaviour of the whole system on rea
 
 Because all three implement `LLMProvider`, the loop does not know which one it has. This is dependency inversion in practice.
 
-### 1.9 Robust anomaly detection
+### 1.9 Ranking documents with BM25
+Counting how often query words appear in a document has three problems: a word that is in every document ("device") counts as much as a rare, specific one ("fan"); saying a word 40 times scores 40 times higher; and long documents win just by being long. BM25 fixes all three: **IDF** weights rare words up, the **K1** term makes repeated occurrences saturate, and the **B** term normalises by document length. It is still the baseline that search engines (Lucene, Elasticsearch) use before any embeddings. See `searchRunbooks` in `src/data/runbooks.ts`.
+
+### 1.10 Robust anomaly detection
 - **z-score**: how many standard deviations a point is from the mean. Problem: a long anomaly pulls the mean and inflates the standard deviation, hiding itself ("masking").
 - **Robust z-score**: use the median and the MAD (median absolute deviation) instead; `1.4826 * MAD` estimates the standard deviation for normal data, and outliers barely move the median.
 - **EWMA**: smooth the series, `s = alpha * x + (1 - alpha) * s`. Noise cancels out, slow drifts remain. Good for "bearing slowly wearing out".

@@ -139,14 +139,14 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 - The agent HTTP API supports a bearer token (`AGENT_API_TOKEN`); without it, it is open. The MCP HTTP endpoint has no authentication: local use only.
 - Run state and pending approvals live in memory; restarting the server loses them (decisions already made are kept in the audit log).
 - Restarts are simulated (an audit row and a status flag in SQLite).
-- Runbook search is keyword counting, fine for six documents, not for thousands.
+- Runbook search is BM25 over words (no synonyms or embeddings): "overheat" finds "overheating", but "too hot" does not.
 - Single-tenant, single SQLite file; no time-series database.
 
 ## What I'd do next
 
 1. ~~**Authenticate the HTTP API** with a bearer token from the environment, so approvals cannot be granted by anyone who can reach the port.~~ Done: set `AGENT_API_TOKEN`; the React page and trace viewer ask for it.
 2. ~~**Persist an approval audit log** (who approved what, when, for which run) in SQLite instead of only in traces.~~ Done: every CLI and HTTP decision goes to `data/audit.db` (`AUDIT_DB_PATH`), readable at `GET /api/audit`.
-3. **BM25 ranking for runbook search**, with document-length normalisation and IDF so common words stop dominating.
+3. ~~**BM25 ranking for runbook search**, with document-length normalisation and IDF so common words stop dominating.~~ Done: `searchRunbooks` in `src/data/runbooks.ts`.
 4. **OTLP export** of the same spans, so traces can go to Jaeger, Grafana Tempo or Honeycomb.
 5. **Real-model eval run** with an LLM-as-judge for answer quality, alongside the deterministic checks.
 

@@ -1,5 +1,5 @@
 // Runbooks are markdown files in /runbooks. They are small, so we load them
-// all into memory and search them with simple keyword scoring.
+// all into memory and rank them with BM25 (classic keyword relevance).
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,20 +29,46 @@ function tokenize(text: string): string[] {
   return (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((t) => t.length > 1 && !STOPWORDS.has(t));
 }
 
+// BM25 parameters (the usual defaults): K1 controls how fast repeated
+// occurrences of a word stop adding score; B controls how much long
+// documents are penalised.
+const K1 = 1.2;
+const B = 0.75;
+const TITLE_BOOST = 3; // title words count as if they appeared 3 times
+
 /**
- * Score = sum over query terms of (occurrences in body + 3 x occurrences in title).
- * A term also matches words that start with it ("overheat" matches "overheating").
- * Good enough for a handful of documents; see docs/adr for why there are no embeddings.
+ * BM25 ranking. For each query term t and document d:
+ *
+ *   idf(t)      = ln(1 + (N - n_t + 0.5) / (n_t + 0.5))     rare words matter more
+ *   tf(t, d)    = occurrences of t in d (a term also matches words that start with it)
+ *   score(t, d) = idf(t) * tf * (K1 + 1) / (tf + K1 * (1 - B + B * len(d) / avgLen))
+ *
+ * Compared with plain term counting, a word that appears in every runbook
+ * ("device") barely counts, repeating a word has diminishing returns, and a
+ * long document does not win just by being long.
  */
 export function searchRunbooks(runbooks: Runbook[], query: string, limit = 3) {
-  const terms = tokenize(query);
+  const terms = [...new Set(tokenize(query))];
+  // Each document as a bag of words; title words are repeated to boost them.
+  const docs = runbooks.map((rb) => [...tokenize(rb.content), ...Array(TITLE_BOOST).fill(tokenize(rb.title)).flat()]);
+  const avgLen = docs.reduce((sum, d) => sum + d.length, 0) / Math.max(docs.length, 1);
+  const count = (words: string[], term: string) => words.filter((w) => w.startsWith(term)).length;
+
+  const idf = new Map(
+    terms.map((t) => {
+      const n = docs.filter((d) => count(d, t) > 0).length;
+      return [t, Math.log(1 + (docs.length - n + 0.5) / (n + 0.5))];
+    }),
+  );
+
   return runbooks
-    .map((rb) => {
-      const body = tokenize(rb.content);
-      const title = tokenize(rb.title);
-      const count = (words: string[], term: string) => words.filter((w) => w.startsWith(term)).length;
-      const score = terms.reduce((sum, t) => sum + count(body, t) + 3 * count(title, t), 0);
-      return { slug: rb.slug, title: rb.title, score, uri: `runbook://${rb.slug}`, content: rb.content };
+    .map((rb, i) => {
+      const words = docs[i]!;
+      const score = terms.reduce((sum, t) => {
+        const tf = count(words, t);
+        return sum + (idf.get(t)! * tf * (K1 + 1)) / (tf + K1 * (1 - B + (B * words.length) / avgLen));
+      }, 0);
+      return { slug: rb.slug, title: rb.title, score: Number(score.toFixed(3)), uri: `runbook://${rb.slug}`, content: rb.content };
     })
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score)
