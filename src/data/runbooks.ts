@@ -23,10 +23,40 @@ export function loadRunbooks(dir = RUNBOOK_DIR): Runbook[] {
     });
 }
 
-const STOPWORDS = new Set(["the", "a", "an", "is", "of", "to", "and", "or", "in", "on", "for", "why", "what", "how", "with", "my"]);
+const STOPWORDS = new Set(["the", "a", "an", "is", "are", "it", "do", "does", "of", "to", "and", "or", "in", "on", "for", "why", "what", "how", "with", "my", "too", "keeps"]);
 
 function tokenize(text: string): string[] {
   return (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((t) => t.length > 1 && !STOPWORDS.has(t));
+}
+
+// Operator vocabulary -> runbook vocabulary. Operators say "too hot" or
+// "keeps dropping"; runbooks say "overheating" and "connectivity". Keyword
+// search cannot bridge that gap, so each query word that has an entry here
+// adds the runbook words to the query. A tiny, explicit stand-in for semantic
+// search (embeddings) that needs no model and is easy to audit.
+const SYNONYMS: Record<string, string[]> = {
+  hot: ["overheating", "temperature"],
+  heat: ["overheating", "temperature"],
+  warm: ["temperature"],
+  shaking: ["vibration"],
+  shake: ["vibration"],
+  rattling: ["vibration"],
+  noisy: ["vibration"],
+  offline: ["connectivity", "signal"],
+  dropping: ["connectivity", "signal"],
+  disconnected: ["connectivity", "signal"],
+  reception: ["signal"],
+  draining: ["battery"],
+  charge: ["battery"],
+  reboot: ["restart"],
+  reset: ["restart"],
+  cycle: ["restart"],
+};
+
+/** Query terms plus the runbook words for any operator vocabulary they contain. */
+export function expandQuery(query: string): string[] {
+  const terms = tokenize(query);
+  return [...new Set([...terms, ...terms.flatMap((t) => SYNONYMS[t] ?? [])])];
 }
 
 // BM25 parameters (the usual defaults): K1 controls how fast repeated
@@ -48,7 +78,7 @@ const TITLE_BOOST = 3; // title words count as if they appeared 3 times
  * long document does not win just by being long.
  */
 export function searchRunbooks(runbooks: Runbook[], query: string, limit = 3) {
-  const terms = [...new Set(tokenize(query))];
+  const terms = expandQuery(query);
   // Each document as a bag of words; title words are repeated to boost them.
   const docs = runbooks.map((rb) => [...tokenize(rb.content), ...Array(TITLE_BOOST).fill(tokenize(rb.title)).flat()]);
   const avgLen = docs.reduce((sum, d) => sum + d.length, 0) / Math.max(docs.length, 1);

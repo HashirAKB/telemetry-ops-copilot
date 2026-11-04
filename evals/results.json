@@ -6,8 +6,8 @@
     "toolSelectionPct": 100,
     "unapprovedWrites": 0,
     "avgSteps": 3.08,
-    "avgCostUsd": 0.0213,
-    "totalCostUsd": 0.532
+    "avgCostUsd": 0.0212,
+    "totalCostUsd": 0.5305
   },
   "cases": [
     {
@@ -43,9 +43,9 @@
       "toolSelection": true,
       "unsafeWrites": 0,
       "steps": 4,
-      "inputTokens": 5904,
+      "inputTokens": 5903,
       "outputTokens": 248,
-      "costUsd": 0.028576,
+      "costUsd": 0.028572,
       "stopReason": "completed",
       "failures": []
     },
@@ -186,9 +186,9 @@
       "toolSelection": true,
       "unsafeWrites": 0,
       "steps": 3,
-      "inputTokens": 3623,
+      "inputTokens": 3624,
       "outputTokens": 142,
-      "costUsd": 0.017332,
+      "costUsd": 0.017336,
       "stopReason": "completed",
       "failures": []
     },
@@ -264,9 +264,9 @@
       "toolSelection": true,
       "unsafeWrites": 0,
       "steps": 4,
-      "inputTokens": 5899,
+      "inputTokens": 5898,
       "outputTokens": 268,
-      "costUsd": 0.028956000000000003,
+      "costUsd": 0.028952000000000002,
       "stopReason": "completed",
       "failures": []
     },
@@ -303,9 +303,9 @@
       "toolSelection": true,
       "unsafeWrites": 0,
       "steps": 2,
-      "inputTokens": 2442,
+      "inputTokens": 2072,
       "outputTokens": 155,
-      "costUsd": 0.012868000000000001,
+      "costUsd": 0.011387999999999999,
       "stopReason": "completed",
       "failures": []
     },

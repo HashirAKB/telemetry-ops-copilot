@@ -113,3 +113,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D28. Live progress = trace spans forwarded over Server-Sent Events, read with fetch
 - **Alternatives:** WebSockets; a separate progress callback in the agent loop; browser `EventSource`.
 - **Why:** spans already describe every step, so a sink that forwards them needs no change to the loop. SSE is one-way and plain HTTP, which is all progress needs. `EventSource` cannot send an `Authorization` header, so the page reads the stream with `fetch`. Spans are buffered per run so late subscribers catch up; `done` is sent only after the result is saved, so a follow-up `GET /api/runs/:id` never sees a stale state.
+
+## D29. Query expansion with a synonym table instead of embeddings
+- **Alternatives:** an embedding model (e.g. via transformers.js) with a vector index.
+- **Why:** the real gap was everyday phrasing ("too hot", "keeps dropping") not matching runbook words. A 20-entry table closes it, is auditable, and needs no model download (not possible offline here) or native runtime. Limitations found while testing and documented: BM25 gives almost no weight to words in every runbook ("restart"), and unknown phrasing ("unit") can still rank the vendor bulletin first. "too" and "keeps" were added as stopwords; "power" was dropped as a synonym because it collides with "power-cycles".

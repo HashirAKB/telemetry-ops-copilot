@@ -140,13 +140,14 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 - The agent HTTP API supports a bearer token (`AGENT_API_TOKEN`); without it, it is open. The MCP HTTP endpoint supports a bearer token (`MCP_API_TOKEN`) and a read-only mode (`MCP_READ_ONLY=1`); both are off by default for local use.
 - A run waiting for approval cannot survive a server restart; it is marked `interrupted` (run history and the audit log are persisted in `data/agent.db`).
 - Restarts are simulated (an audit row and a status flag in SQLite).
-- Runbook search is BM25 over words (no synonyms or embeddings): "overheat" finds "overheating", but "too hot" does not.
+- Runbook search is BM25 plus a small hand-written synonym table, not embeddings. Words that appear in every runbook (such as "restart") carry almost no weight, and phrasing outside the table ("unit") can rank the wrong runbook first.
 - Single-tenant, single SQLite file; no time-series database.
 
 ## What I'd do next
 
 1. **Run the eval suite against a real model** (`npm run eval -- --provider anthropic --judge`), commit `evals/results-anthropic.md`, and tune the system prompt against it.
-2. **Semantic runbook search** (embeddings, with BM25 as a hybrid) once there are more than a handful of runbooks.
+2. **Semantic runbook search** (embeddings, with BM25 as a hybrid) once there are more than a handful of runbooks. The synonym table is the offline stand-in for now.
+3. **Durable runs**: persist the conversation and pending approval so a run can resume after a restart instead of being marked interrupted.
 
 ### Done after the first release
 
@@ -154,6 +155,7 @@ These were the original "next" items; each is implemented with tests in its own 
 
 - Bearer-token auth on the agent HTTP API (`AGENT_API_TOKEN`); the web page and trace viewer ask for the token.
 - Approval audit log in SQLite (`data/agent.db`, `GET /api/audit`) for CLI and HTTP decisions.
+- Operator-vocabulary query expansion for runbook search ("too hot" finds Overheating, "motor shaking" finds vibration).
 - Live run progress: `GET /api/runs/:id/events` streams trace spans as Server-Sent Events; the web page shows each LLM call, tool call and approval as it happens.
 - MCP HTTP endpoint hardening: optional bearer token (`MCP_API_TOKEN`) and a read-only mode (`MCP_READ_ONLY=1`) in which the write tools are not registered at all.
 - Run history in SQLite (`data/agent.db`): finished runs survive a restart; runs cut off by a restart are marked `interrupted` instead of hanging forever.

@@ -25,6 +25,7 @@ Tick each milestone when its success criterion (see SPEC.md section 7) passes an
 - [x] 2. Persist runs in SQLite; mark runs cut off by a restart as interrupted
 - [x] 3. MCP HTTP bearer token + read-only server mode
 - [x] 4. Live run progress over Server-Sent Events
+- [x] 5. Runbook search: operator-vocabulary query expansion (offline stand-in for embeddings)
 
 ## Blockers
 
