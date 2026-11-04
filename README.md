@@ -55,6 +55,7 @@ The agent will ask `Approve? [y/N]` in the terminal before the restart. Other en
 | `npm run serve` | Agent HTTP API on :3000 (chat, approve/deny, traces), trace viewer at `/viewer`, React page at `/` once built (`npm run web:build`) |
 | `npm run mcp:stdio` / `npm run mcp:http` | The MCP server on its own ([Claude Desktop setup](docs/claude-desktop.md)) |
 | `npm run eval` | Run the 25 eval cases, write `evals/results.{json,md}` |
+| `npm run check` | Everything the main CI job runs: lint, typecheck, tests, eval check, committed-results freshness |
 | `npm test` | Unit and integration tests |
 | `npm run test:e2e` | Browser test of the React page (needs `npm run web:build` and Chromium) |
 | `docker build -t telemetry-ops-copilot . && docker run -p 3000:3000 telemetry-ops-copilot` | Containerised API |
@@ -73,7 +74,7 @@ D-17 is alerting: temperature high (peak 70.84, 37.7 robust sigmas, ongoing sinc
 Runbook "Overheating (high temperature)". Likely causes: Blocked ventilation or failed enclosure fan. Direct sunlight on the enclosure after a site layout change.
 Recommended: Open an incident with severity `high` if temperature is above 60 C, otherwise `medium`. A restart clears a stuck radio power state; it does not fix blocked airflow.
 
-  stop=completed steps=4 tokens=5886+255 cost=USD 0.0286
+  stop=completed steps=4 tokens=5893+255 cost=USD 0.0287
 --------------------------------------------------------------------------------
 > Open an incident for D-17 and restart it
   tool detect_anomalies(...) -> ok

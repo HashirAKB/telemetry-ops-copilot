@@ -21,7 +21,8 @@
     "eval": "tsx evals/run.ts",
     "web:build": "vite build --config web/vite.config.ts",
     "web:dev": "vite --config web/vite.config.ts",
-    "test:e2e": "tsx scripts/e2e-web.ts"
+    "test:e2e": "tsx scripts/e2e-web.ts",
+    "check": "npm run lint && npm run typecheck && npm test && npm run eval -- --check && git diff --exit-code evals/results.json evals/results.md"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
