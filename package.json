@@ -15,13 +15,16 @@
     "mcp:stdio": "tsx src/server/stdio.ts",
     "mcp:http": "tsx src/server/http-main.ts",
     "agent": "tsx src/agent/cli.ts",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "serve": "tsx src/agent/http-main.ts",
+    "viewer:screenshot": "tsx scripts/screenshot-viewer.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.20.5",
     "eslint": "^10.14.0",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.1.0"

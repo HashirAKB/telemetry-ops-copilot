@@ -13,6 +13,7 @@ import type { LLMProvider, Message, ToolResultBlock, ToolSpec, ToolUseBlock } fr
 import type { Approver } from "./approval";
 import { Budget, checkToolCall, DEFAULT_BUDGET, type BudgetLimits } from "./guardrails";
 import { SYSTEM_PROMPT } from "./prompt";
+import { Tracer, type ActiveSpan } from "../telemetry/tracer";
 
 export interface AgentOptions {
   provider: LLMProvider;
@@ -21,6 +22,8 @@ export interface AgentOptions {
   allowedTools?: readonly ToolName[]; // default: all six
   maxSteps?: number; // max LLM calls per run
   budget?: BudgetLimits;
+  tracer?: Tracer; // default: spans are discarded
+  runId?: string; // default: random UUID (also used as the trace id)
 }
 
 export type ToolCallStatus = "ok" | "error" | "blocked" | "invalid" | "denied";
@@ -47,7 +50,9 @@ export async function runAgent(question: string, options: AgentOptions): Promise
   const allowed = options.allowedTools ?? TOOL_NAMES;
   const maxSteps = options.maxSteps ?? 8;
   const budget = new Budget(options.budget ?? DEFAULT_BUDGET, provider.model);
-  const runId = randomUUID();
+  const runId = options.runId ?? randomUUID();
+  const root = (options.tracer ?? new Tracer()).startTrace("agent.run", runId);
+  root.set({ "agent.question": question, "gen_ai.system": provider.name, "gen_ai.request.model": provider.model });
 
   // Only advertise allowed tools to the model. The allow-list is enforced
   // again when the model calls a tool, in case it invents a name.
@@ -60,27 +65,49 @@ export async function runAgent(question: string, options: AgentOptions): Promise
   const toolCalls: ToolCallRecord[] = [];
   let steps = 0;
 
-  const finish = (stopReason: RunResult["stopReason"], answer: string): RunResult => ({
-    runId,
-    answer,
-    stopReason,
-    steps,
-    usage: { inputTokens: budget.inputTokens, outputTokens: budget.outputTokens, costUsd: budget.costUsd },
-    toolCalls,
-  });
+  const finish = (stopReason: RunResult["stopReason"], answer: string): RunResult => {
+    const result: RunResult = {
+      runId,
+      answer,
+      stopReason,
+      steps,
+      usage: { inputTokens: budget.inputTokens, outputTokens: budget.outputTokens, costUsd: budget.costUsd },
+      toolCalls,
+    };
+    root.set({
+      "agent.stop_reason": stopReason,
+      "agent.steps": steps,
+      "agent.answer": answer,
+      "gen_ai.usage.input_tokens": result.usage.inputTokens,
+      "gen_ai.usage.output_tokens": result.usage.outputTokens,
+      "agent.cost_usd": Number(result.usage.costUsd.toFixed(6)),
+    });
+    root.end(stopReason === "completed" ? "ok" : "error");
+    return result;
+  };
 
   while (steps < maxSteps) {
     const overBudget = budget.exceeded();
     if (overBudget) return finish("budget_exceeded", `Stopped: ${overBudget}.`);
 
     steps++;
+    const llmSpan = root.child("llm.complete", "llm").set({ "agent.step": steps, "gen_ai.request.model": provider.model });
     let response;
     try {
       response = await provider.complete({ system: SYSTEM_PROMPT, messages, tools });
     } catch (err) {
+      llmSpan.set({ "error.message": (err as Error).message }).end("error");
       return finish("error", `LLM call failed: ${(err as Error).message}`);
     }
     budget.add(response.usage);
+    llmSpan
+      .set({
+        "gen_ai.response.finish_reason": response.stopReason,
+        "gen_ai.usage.input_tokens": response.usage.inputTokens,
+        "gen_ai.usage.output_tokens": response.usage.outputTokens,
+        "llm.tool_calls": response.content.filter((b) => b.type === "tool_use").length,
+      })
+      .end();
     messages.push({ role: "assistant", content: response.content });
 
     if (response.stopReason === "refusal") return finish("refusal", "The model declined this request.");
@@ -98,7 +125,7 @@ export async function runAgent(question: string, options: AgentOptions): Promise
     // ONE user message, as the Messages API expects.
     const results: ToolResultBlock[] = [];
     for (const use of toolUses) {
-      const record = await executeToolCall(use, { mcp, approver, allowed, runId });
+      const record = await executeToolCall(use, { mcp, approver, allowed, runId, parent: root });
       toolCalls.push(record);
       results.push({
         type: "tool_result",
@@ -112,18 +139,40 @@ export async function runAgent(question: string, options: AgentOptions): Promise
   return finish("max_steps", `Stopped after ${maxSteps} steps without a final answer.`);
 }
 
-/** Guardrails, then approval (for writes), then the actual MCP call. */
-async function executeToolCall(
-  use: ToolUseBlock,
-  ctx: { mcp: Client; approver: Approver; allowed: readonly ToolName[]; runId: string },
-): Promise<ToolCallRecord> {
+interface ToolContext {
+  mcp: Client;
+  approver: Approver;
+  allowed: readonly ToolName[];
+  runId: string;
+  parent: ActiveSpan;
+}
+
+/** One traced tool call: guardrails, approval (for writes), then the MCP call. */
+async function executeToolCall(use: ToolUseBlock, ctx: ToolContext): Promise<ToolCallRecord> {
+  const span = ctx.parent.child(`tool.${use.name}`, "tool");
+  const record = await guardedCall(use, ctx, span);
+  span
+    .set({
+      "tool.name": record.name,
+      "tool.args": JSON.stringify(record.args),
+      "tool.status": record.status,
+      "tool.output_chars": record.output.length,
+      "tool.output_preview": record.output.slice(0, 300),
+    })
+    .end(record.status === "ok" ? "ok" : "error");
+  return record;
+}
+
+async function guardedCall(use: ToolUseBlock, ctx: ToolContext, span: ActiveSpan): Promise<ToolCallRecord> {
   const check = checkToolCall(use.name, use.input, ctx.allowed);
   if (!check.ok) return { name: use.name, args: use.input, status: check.status, output: check.message };
 
   let approval: ToolCallRecord["approval"];
   if (check.needsApproval) {
+    const approvalSpan = span.child("approval", "approval").set({ "tool.name": check.tool });
     const decision = await ctx.approver.approve({ runId: ctx.runId, tool: check.tool, args: check.args });
     approval = { approved: decision.approved, by: decision.by };
+    approvalSpan.set({ "approval.approved": decision.approved, "approval.by": decision.by }).end();
     if (!decision.approved) {
       return {
         name: use.name,

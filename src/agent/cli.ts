@@ -13,6 +13,7 @@ import { approveAll, CliApprover, denyAll, type Approver } from "./approval";
 import { formatRun } from "./format";
 import { runAgent } from "./loop";
 import { connectHttp, connectInProcess, connectStdio } from "./mcp-client";
+import { jsonlSink, Tracer } from "../telemetry/tracer";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -42,6 +43,7 @@ const mcp =
 
 const provider = createProvider(values.provider as ProviderName);
 console.log(`provider=${provider.name} model=${provider.model} transport=${values.transport}\n`);
-const result = await runAgent(question, { provider, mcp, approver });
+const result = await runAgent(question, { provider, mcp, approver, tracer: new Tracer(jsonlSink("traces")) });
 console.log(formatRun(question, result));
+console.log(`  trace: traces/${result.runId}.jsonl (open viewer/index.html to inspect)`);
 await mcp.close();

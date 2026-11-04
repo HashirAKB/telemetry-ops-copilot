@@ -8,12 +8,14 @@ import { connectInProcess } from "../src/agent/mcp-client";
 import { openDb } from "../src/data/db";
 import { seedDatabase } from "../src/data/seed";
 import { MockProvider } from "../src/llm/mock";
+import { jsonlSink, Tracer } from "../src/telemetry/tracer";
 
 // Fresh in-memory fleet so the demo never modifies data/fleet.db.
 const db = openDb(":memory:");
 seedDatabase(db);
 const mcp = await connectInProcess(db);
 
+const tracer = new Tracer(jsonlSink("traces"));
 const approver = new PolicyApprover((request) => {
   const approved = request.tool === "create_incident";
   console.log(`  [demo operator] ${approved ? "APPROVE" : "DENY"} ${request.tool} ${JSON.stringify(request.args)}`);
@@ -28,8 +30,9 @@ const questions = [
 ];
 
 for (const question of questions) {
-  const result = await runAgent(question, { provider: new MockProvider(), mcp, approver });
+  const result = await runAgent(question, { provider: new MockProvider(), mcp, approver, tracer });
   console.log(formatRun(question, result));
+  console.log(`  trace: traces/${result.runId}.jsonl`);
   console.log("-".repeat(80));
 }
 await mcp.close();

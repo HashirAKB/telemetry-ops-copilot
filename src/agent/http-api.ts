@@ -1,0 +1,110 @@
+// HTTP API for the agent (used by the React page and by curl).
+//
+//   POST /api/chat                 {"message": "..."}  -> 202 {"runId"}
+//   GET  /api/runs/:id             -> {"status": "running" | "done", "result"?}
+//   GET  /api/approvals            -> pending approvals
+//   POST /api/approvals/:id        {"approved": true|false} -> 200 | 404
+//   GET  /api/traces/:id           -> the run's spans (JSONL)
+//   GET  /viewer                   -> static trace viewer
+//   GET  /                         -> React chat page (if built into web/dist)
+//
+// Runs are asynchronous: a run may be waiting for a human approval, so the
+// client polls /api/runs/:id. No authentication: local use only.
+import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { randomUUID } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { createServer, type ServerResponse, type Server } from "node:http";
+import { extname, join, normalize } from "node:path";
+import type { LLMProvider } from "../llm/types";
+import { readJson } from "../server/http";
+import { jsonlSink, Tracer } from "../telemetry/tracer";
+import { HttpApprover } from "./http-approver";
+import { runAgent, type RunResult } from "./loop";
+
+export interface AgentApiOptions {
+  mcp: Client;
+  createProvider: () => LLMProvider;
+  traceDir: string;
+  approver?: HttpApprover;
+  webDir?: string; // built React app
+}
+
+interface RunState {
+  id: string;
+  question: string;
+  status: "running" | "done";
+  result?: RunResult;
+  error?: string;
+}
+
+const ROOT = new URL("../../", import.meta.url).pathname;
+const MIME: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" };
+
+function send(res: ServerResponse, status: number, body: unknown, type = "application/json") {
+  res.writeHead(status, { "Content-Type": type });
+  res.end(type === "application/json" ? JSON.stringify(body) : (body as string | Buffer));
+}
+
+export function createAgentApi(options: AgentApiOptions): Server {
+  const approver = options.approver ?? new HttpApprover();
+  const tracer = new Tracer(jsonlSink(options.traceDir));
+  const runs = new Map<string, RunState>();
+  const webDir = options.webDir ?? join(ROOT, "web/dist");
+
+  return createServer(async (req, res) => {
+    const url = new URL(req.url ?? "/", "http://localhost");
+    const path = url.pathname;
+    try {
+      if (req.method === "POST" && path === "/api/chat") {
+        const body = (await readJson(req)) as { message?: unknown } | undefined;
+        const message = typeof body?.message === "string" ? body.message.trim() : "";
+        if (!message || message.length > 2000) return send(res, 400, { error: "message must be 1-2000 characters" });
+        const id = randomUUID();
+        const state: RunState = { id, question: message, status: "running" };
+        runs.set(id, state);
+        // Fire and forget; the client polls for the result.
+        runAgent(message, { provider: options.createProvider(), mcp: options.mcp, approver, tracer, runId: id })
+          .then((result) => Object.assign(state, { status: "done", result }))
+          .catch((err: Error) => Object.assign(state, { status: "done", error: err.message }));
+        return send(res, 202, { runId: id });
+      }
+
+      const runMatch = path.match(/^\/api\/runs\/([\w-]+)$/);
+      if (req.method === "GET" && runMatch) {
+        const state = runs.get(runMatch[1]!);
+        return state ? send(res, 200, state) : send(res, 404, { error: "unknown run" });
+      }
+
+      if (req.method === "GET" && path === "/api/approvals") return send(res, 200, approver.list());
+
+      const approvalMatch = path.match(/^\/api\/approvals\/([\w-]+)$/);
+      if (req.method === "POST" && approvalMatch) {
+        const body = (await readJson(req)) as { approved?: unknown } | undefined;
+        if (typeof body?.approved !== "boolean") return send(res, 400, { error: '"approved" must be true or false' });
+        const ok = approver.settle(approvalMatch[1]!, { approved: body.approved, by: "http" });
+        return ok ? send(res, 200, { ok: true }) : send(res, 404, { error: "unknown or already decided approval" });
+      }
+
+      const traceMatch = path.match(/^\/api\/traces\/([\w-]+)$/);
+      if (req.method === "GET" && traceMatch) {
+        const file = join(options.traceDir, `${traceMatch[1]}.jsonl`);
+        return existsSync(file) ? send(res, 200, readFileSync(file, "utf8"), "application/x-ndjson") : send(res, 404, { error: "no trace" });
+      }
+
+      if (req.method === "GET" && path === "/viewer") {
+        return send(res, 200, readFileSync(join(ROOT, "viewer/index.html"), "utf8"), "text/html");
+      }
+
+      // Static files of the React app (optional, built in milestone M6).
+      if (req.method === "GET") {
+        const file = normalize(join(webDir, path === "/" ? "index.html" : path));
+        if (file.startsWith(webDir) && existsSync(file) && extname(file)) {
+          return send(res, 200, readFileSync(file), MIME[extname(file)] ?? "application/octet-stream");
+        }
+      }
+      send(res, 404, { error: "not found" });
+    } catch (err) {
+      send(res, 400, { error: (err as Error).message });
+    }
+  });
+}

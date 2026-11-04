@@ -57,3 +57,19 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D14. Demo runs on a fresh in-memory fleet with a scripted operator
 - **Alternatives:** interactive y/n prompts in the demo.
 - **Why:** reproducible output for the README and CI; never mutates `data/fleet.db`. The interactive path is `npm run agent`.
+
+## D15. Hand-rolled tracer with OpenTelemetry span shape, JSONL sink
+- **Alternatives:** `@opentelemetry/sdk-trace-node` + file exporter.
+- **Why:** ~80 lines a learner can read fully; the span fields (traceId, spanId, parentSpanId, attributes using `gen_ai.*` names) match OTel, so moving to a real exporter is a new sink, not a rewrite. Trace id = run id.
+
+## D16. HTTP runs are asynchronous; clients poll
+- **Alternatives:** keep the POST open until the run ends; WebSockets/SSE.
+- **Why:** a run can wait minutes for a human approval. Polling two endpoints is the simplest thing that works with curl and a small React page.
+
+## D17. Unanswered HTTP approvals are denied after 5 minutes
+- **Alternatives:** wait forever; approve on timeout.
+- **Why:** fail safe. A forgotten approval must never turn into an action, and must not hang a run forever.
+
+## D18. Viewer screenshot uses `playwright-core` pinned to the pre-installed browser version
+- **Alternatives:** full `playwright` package (downloads browsers).
+- **Why:** no browser download needed; dev-only script, not part of CI.

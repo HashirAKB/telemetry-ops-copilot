@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trace Viewer</title>
+<!--
+  Static trace viewer for Telemetry Ops Copilot. No build step, no dependencies.
+  Open this file directly and pick a traces/<run>.jsonl file, or serve it via
+  `npm run serve` and open /viewer?trace=<runId>.
+-->
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1d2330; --muted: #667085; --border: #e4e7ec; --row: #f8f9fb;
+    --agent: #6b5bd2; --llm: #2f80ed; --tool: #12a17d; --approval: #e0861f; --error: #d64545;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151c; --fg: #e6e9ef; --muted: #98a2b3; --border: #2a303c; --row: #181c25;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; font: 14px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .stat b { display: block; font-size: 16px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .question { margin: 0 0 12px; font-size: 15px; }
+  .legend { display: flex; gap: 12px; color: var(--muted); font-size: 12px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .rows { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .span { display: grid; grid-template-columns: minmax(140px, 32%) 1fr 70px; gap: 8px; align-items: center;
+          padding: 6px 10px; border-top: 1px solid var(--border); cursor: pointer; }
+  .span:first-child { border-top: 0; }
+  .span:hover, .span.open { background: var(--row); }
+  .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track { position: relative; height: 14px; }
+  .track div { position: absolute; top: 0; height: 14px; border-radius: 3px; min-width: 2px; }
+  .ms { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .err { color: var(--error); font-weight: 600; }
+  .attrs { grid-column: 1 / -1; margin: 4px 0 2px; font: 12px/1.4 ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; color: var(--muted); }
+  .answer { white-space: pre-wrap; border-left: 3px solid var(--agent); padding: 8px 12px; margin: 16px 0; background: var(--row); border-radius: 4px; }
+  .empty { color: var(--muted); padding: 24px 0; }
+</style>
+</head>
+<body>
+<h1>Trace Viewer</h1>
+<div class="bar">
+  <input type="file" id="file" accept=".jsonl,.json,application/x-ndjson">
+  <div class="legend">
+    <span><i style="background:var(--agent)"></i>agent</span>
+    <span><i style="background:var(--llm)"></i>llm</span>
+    <span><i style="background:var(--tool)"></i>tool</span>
+    <span><i style="background:var(--approval)"></i>approval</span>
+  </div>
+</div>
+<div id="out"><p class="empty">Choose a <code>traces/&lt;run&gt;.jsonl</code> file to see the run as a timeline.</p></div>
+
+<script>
+  const out = document.getElementById("out");
+
+  function esc(text) {
+    return String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  }
+
+  // Order spans as a tree: each parent followed by its children (by start time).
+  function ordered(spans) {
+    const children = new Map();
+    for (const s of spans) {
+      const key = s.parentSpanId || "root";
+      if (!children.has(key)) children.set(key, []);
+      children.get(key).push(s);
+    }
+    for (const list of children.values()) list.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    const result = [];
+    const walk = (key, depth) => (children.get(key) || []).forEach((s) => { result.push([s, depth]); walk(s.spanId, depth + 1); });
+    walk("root", 0);
+    return result;
+  }
+
+  function render(text) {
+    const spans = text.split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l));
+    if (!spans.length) { out.innerHTML = '<p class="empty">No spans in this file.</p>'; return; }
+    const root = spans.find((s) => !s.parentSpanId) || spans[0];
+    const t0 = Math.min(...spans.map((s) => Date.parse(s.startTime)));
+    const total = Math.max(1, Math.max(...spans.map((s) => Date.parse(s.endTime))) - t0);
+    const a = root.attributes || {};
+    const stat = (label, value) => `<div class="stat"><b>${esc(value)}</b><span>${label}</span></div>`;
+
+    let html = `<p class="question"><b>Question:</b> ${esc(a["agent.question"] ?? "")}</p>`;
+    html += '<div class="summary">' +
+      stat("stop reason", a["agent.stop_reason"] ?? "?") +
+      stat("LLM calls", a["agent.steps"] ?? "?") +
+      stat("tool calls", spans.filter((s) => s.kind === "tool").length) +
+      stat("tokens in / out", `${a["gen_ai.usage.input_tokens"] ?? 0} / ${a["gen_ai.usage.output_tokens"] ?? 0}`) +
+      stat("cost (USD)", (a["agent.cost_usd"] ?? 0).toFixed(4)) +
+      stat("duration", `${root.durationMs} ms`) + "</div>";
+
+    html += '<div class="rows">';
+    for (const [s, depth] of ordered(spans)) {
+      const left = ((Date.parse(s.startTime) - t0) / total) * 100;
+      const width = (s.durationMs / total) * 100;
+      const status = s.status === "error" ? ' <span class="err">error</span>' : "";
+      const label = s.kind === "tool" ? `${s.name} (${esc(s.attributes["tool.status"] ?? "")})`
+        : s.kind === "approval" ? `approval: ${s.attributes["approval.approved"] ? "approved" : "DENIED"} by ${esc(s.attributes["approval.by"] ?? "?")}`
+        : s.kind === "llm" ? `llm call #${s.attributes["agent.step"]} -> ${esc(s.attributes["gen_ai.response.finish_reason"] ?? "?")}`
+        : s.name;
+      html += `<div class="span" data-kind="${s.kind}">
+        <div class="name" style="padding-left:${depth * 16}px">${esc(label)}${status}</div>
+        <div class="track"><div style="left:${left}%;width:${width}%;background:var(--${s.kind})"></div></div>
+        <div class="ms">${s.durationMs} ms</div>
+        <div class="attrs" hidden>${esc(JSON.stringify(s.attributes, null, 2))}</div>
+      </div>`;
+    }
+    html += "</div>";
+    if (a["agent.answer"]) html += `<div class="answer">${esc(a["agent.answer"])}</div>`;
+    out.innerHTML = html;
+    out.querySelectorAll(".span").forEach((row) => row.addEventListener("click", () => {
+      row.classList.toggle("open");
+      row.querySelector(".attrs").hidden = !row.classList.contains("open");
+    }));
+  }
+
+  document.getElementById("file").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file) render(await file.text());
+  });
+
+  // When served by the agent API: /viewer?trace=<runId>
+  const traceId = new URLSearchParams(location.search).get("trace");
+  if (traceId) {
+    fetch(`/api/traces/${encodeURIComponent(traceId)}`)
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then(render)
+      .catch((err) => { out.innerHTML = `<p class="empty">Could not load trace: ${esc(err.message)}</p>`; });
+  }
+</script>
+</body>
+</html>
