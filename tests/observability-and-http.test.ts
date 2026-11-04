@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { approveAll, PolicyApprover } from "../src/agent/approval";
+import { AuditLog } from "../src/agent/audit";
 import { createAgentApi, isAuthorized } from "../src/agent/http-api";
 import { HttpApprover } from "../src/agent/http-approver";
 import { runAgent } from "../src/agent/loop";
@@ -77,7 +78,8 @@ describe("tracing", () => {
 describe("agent HTTP API with approve/deny", () => {
   it("runs a chat, waits for approvals over HTTP, then finishes", async () => {
     const traceDir = mkdtempSync(join(tmpdir(), "traces-"));
-    const server = createAgentApi({ mcp, createProvider: () => new MockProvider(), traceDir, approver: new HttpApprover() });
+    const audit = new AuditLog(":memory:");
+    const server = createAgentApi({ mcp, createProvider: () => new MockProvider(), traceDir, approver: new HttpApprover(), audit });
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const base = `http://localhost:${(server.address() as AddressInfo).port}`;
     const post = (path: string, body: unknown) =>
@@ -123,6 +125,12 @@ describe("agent HTTP API with approve/deny", () => {
       expect(trace.trim().split("\n").length).toBeGreaterThan(5);
       expect((await fetch(`${base}/viewer`)).status).toBe(200);
       expect((await fetch(`${base}/api/runs/nope`)).status).toBe(404);
+
+      const log = await get("/api/audit");
+      expect(log.map((e: { tool: string; approved: number; decided_by: string }) => [e.tool, e.approved, e.decided_by])).toEqual([
+        ["restart_device", 0, "http"],
+        ["create_incident", 1, "http"],
+      ]);
     } finally {
       server.close();
     }

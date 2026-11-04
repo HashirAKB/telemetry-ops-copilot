@@ -5,6 +5,7 @@
 //   GET  /api/approvals            -> pending approvals
 //   POST /api/approvals/:id        {"approved": true|false} -> 200 | 404
 //   GET  /api/traces/:id           -> the run's spans (JSONL)
+//   GET  /api/audit                -> recent approval decisions (newest first)
 //   GET  /viewer                   -> static trace viewer
 //   GET  /                         -> React chat page (if built into web/dist)
 //
@@ -24,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import type { LLMProvider } from "../llm/types";
 import { readJson } from "../server/http";
 import { jsonlSink, Tracer } from "../telemetry/tracer";
+import { withAudit, type AuditLog } from "./audit";
 import { HttpApprover } from "./http-approver";
 import { runAgent, type RunResult } from "./loop";
 
@@ -34,6 +36,7 @@ export interface AgentApiOptions {
   approver?: HttpApprover;
   webDir?: string; // built React app
   apiToken?: string; // if set, required as a bearer token on /api/*
+  audit?: AuditLog; // if set, every approval decision is recorded
 }
 
 interface RunState {
@@ -61,6 +64,7 @@ function send(res: ServerResponse, status: number, body: unknown, type = "applic
 
 export function createAgentApi(options: AgentApiOptions): Server {
   const approver = options.approver ?? new HttpApprover();
+  const runApprover = options.audit ? withAudit(approver, options.audit) : approver;
   const tracer = new Tracer(jsonlSink(options.traceDir));
   const runs = new Map<string, RunState>();
   const webDir = options.webDir ?? join(ROOT, "web/dist");
@@ -80,7 +84,7 @@ export function createAgentApi(options: AgentApiOptions): Server {
         const state: RunState = { id, question: message, status: "running" };
         runs.set(id, state);
         // Fire and forget; the client polls for the result.
-        runAgent(message, { provider: options.createProvider(), mcp: options.mcp, approver, tracer, runId: id })
+        runAgent(message, { provider: options.createProvider(), mcp: options.mcp, approver: runApprover, tracer, runId: id })
           .then((result) => Object.assign(state, { status: "done", result }))
           .catch((err: Error) => Object.assign(state, { status: "done", error: err.message }));
         return send(res, 202, { runId: id });
@@ -93,6 +97,7 @@ export function createAgentApi(options: AgentApiOptions): Server {
       }
 
       if (req.method === "GET" && path === "/api/approvals") return send(res, 200, approver.list());
+      if (req.method === "GET" && path === "/api/audit") return send(res, 200, options.audit?.recent() ?? []);
 
       const approvalMatch = path.match(/^\/api\/approvals\/([\w-]+)$/);
       if (req.method === "POST" && approvalMatch) {

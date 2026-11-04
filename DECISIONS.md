@@ -85,3 +85,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D21. Optional bearer token on /api/*, constant-time compare, static pages public
 - **Alternatives:** always require a token (breaks the zero-setup quickstart); sessions/cookies; mTLS.
 - **Why:** one env var gives real protection for approvals; unset keeps local dev frictionless but the server prints a warning. Static pages hold no data, so they stay public and ask for the token. The page keeps it in localStorage so the trace viewer tab can reuse it.
+
+## D22. Approval audit log as a decorator, in the agent's own SQLite file
+- **Alternatives:** write approvals into the fleet database; rely on traces only.
+- **Why:** the agent talks to the server only through MCP, so it should not write into the server's database. A decorator (`withAudit`) adds auditing to every approver type without touching them. Traces can be rotated; an audit log is the durable record.

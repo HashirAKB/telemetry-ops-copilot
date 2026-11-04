@@ -3,6 +3,7 @@
 import { config } from "../config";
 import { openSeededDb } from "../data/seed";
 import { createProvider } from "../llm";
+import { AuditLog } from "./audit";
 import { createAgentApi } from "./http-api";
 import { connectInProcess } from "./mcp-client";
 
@@ -12,6 +13,7 @@ const server = createAgentApi({
   createProvider: () => createProvider("auto"),
   traceDir: "traces",
   apiToken: config.agentApiToken || undefined,
+  audit: new AuditLog(config.auditDbPath),
 });
 server.listen(config.agentPort, () => {
   console.log(`Agent API on http://localhost:${config.agentPort}  (trace viewer: /viewer)`);
