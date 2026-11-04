@@ -29,4 +29,10 @@ Tick each milestone when its success criterion (see SPEC.md section 7) passes an
 
 ## Blockers
 
-_None._
+- **Real-model eval run:** needs `ANTHROPIC_API_KEY`; this environment has no LLM API access. Command: `npm run eval -- --provider anthropic --judge`.
+- **Docker image not built locally:** Docker Hub rate-limited the base image pull (429). The CI `docker` job builds and runs it successfully.
+
+## Deliberately not done
+
+- **Embedding-based runbook search:** six runbooks do not justify a model and a vector index (D23, D29).
+- **Resumable runs:** needs idempotency keys on write tools to avoid repeating an action on resume (D26).

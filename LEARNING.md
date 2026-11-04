@@ -97,12 +97,14 @@ See `src/data/anomalies.ts` and ADR 0004.
 | 12 | `src/agent/approval.ts`, `src/agent/http-approver.ts` | Three ways a human (or policy) decides; fail-safe timeout |
 | 13 | `src/agent/loop.ts` | The agent itself: loop, stop conditions, tool execution, tracing |
 | 14 | `src/telemetry/tracer.ts`, `viewer/index.html` | Spans, trace trees, rendering a timeline |
-| 15 | `src/agent/http-api.ts` | Async runs, polling, approve/deny endpoints |
+| 15 | `src/agent/http-api.ts`, `src/agent/live-runs.ts` | Async runs, approve/deny endpoints, bearer-token auth, live progress over Server-Sent Events |
 | 16 | `src/llm/replay.ts`, `fixtures/*.json` | Testing guardrails with a deliberately bad model |
-| 17 | `evals/score.ts`, `evals/run.ts`, `evals/cases.json` | Measuring behaviour; safety from evidence |
+| 17 | `evals/score.ts`, `evals/run.ts`, `evals/cases.json`, `evals/judge.ts` | Measuring behaviour; safety from evidence; LLM-as-judge kept separate from gating metrics |
 | 18 | `tests/*.test.ts` | How each layer is tested |
 | 19 | `src/llm/anthropic.ts` | The real API call |
-| 20 | `docs/adr/*`, `DECISIONS.md` | Why things are the way they are |
+| 20 | `src/agent/agent-db.ts`, `src/agent/audit.ts`, `src/agent/run-store.ts` | The agent's own storage: approval audit log (a decorator) and run history that is honest about restarts |
+| 21 | `src/telemetry/otlp.ts` | Converting the same spans to OTLP/JSON for real observability backends |
+| 22 | `docs/adr/*`, `DECISIONS.md` | Why things are the way they are |
 
 ---
 
@@ -170,7 +172,7 @@ For slow drifts. Each point in a drift may be only slightly unusual, but the smo
 OpenTelemetry-shaped spans: trace id (= run id), span id, parent, timings, status and attributes such as `gen_ai.usage.input_tokens`, `tool.name`, `approval.approved`. They are written as JSONL and rendered by a static viewer. Setting `OTEL_EXPORTER_OTLP_ENDPOINT` also exports them as OTLP/HTTP JSON (`src/telemetry/otlp.ts`) to Tempo, Jaeger or Honeycomb: adding that was just a new sink, with no change to the loop. In production I would add sampling and batching across traces.
 
 **15. What would break first in production, and what would you change?**
-The HTTP API has no auth, so anyone who can reach it could approve actions: add authentication and an audit log of approvers. Runs and pending approvals are in memory: persist them. SQLite and per-request full scans would not scale to millions of devices: use a time-series store and precomputed anomaly jobs. And I would run the eval suite against the real model, with an LLM judge for answer quality, before every prompt or model change.
+Auth is a single shared bearer token per endpoint: production needs per-user identity (OAuth, which the MCP spec describes for remote servers) so the audit log records *who* approved, not just "http". A run waiting for approval dies on restart (it is marked interrupted); making it resumable needs idempotency keys on write tools, or a crash between the restart and the checkpoint would repeat the restart on resume. SQLite and per-request full scans would not scale to millions of devices: use a time-series store and precomputed anomaly jobs. And I would run the eval suite against the real model (`--provider anthropic --judge`) before every prompt or model change.
 
 ---
 

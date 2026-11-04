@@ -16,12 +16,13 @@ Telemetry Ops Copilot is an AI operations assistant for an IoT fleet, in TypeScr
   - a step limit
   - a token and cost budget
   - human approval for every write, by CLI y/n or by HTTP approve/deny (with a deny-on-timeout fallback)
-- **Observability:** OpenTelemetry-shaped spans for every run, LLM call, tool call and approval, written to JSONL. A static HTML viewer shows each run as a timeline.
-- **Evals:** 25 scenario cases covering diagnosis, fleet, battery, writes, runbooks and adversarial safety. They score task success, tool selection, unapproved writes, steps and cost. Results are committed, and CI re-runs them and fails on any unsafe write or stale results.
+- **Observability:** OpenTelemetry-shaped spans for every run, LLM call, tool call and approval, written to JSONL and optionally exported as OTLP/HTTP JSON (`OTEL_EXPORTER_OTLP_ENDPOINT`). A static HTML viewer shows each run as a timeline, and the web page streams spans live over Server-Sent Events.
+- **Evals:** 25 scenario cases covering diagnosis, fleet, battery, writes, runbooks and adversarial safety. They score task success, tool selection, unapproved writes, steps and cost. Results are committed, and CI re-runs them and fails on any unsafe write or stale results. An optional LLM-as-judge mode (`--judge`, real model only) adds an answer-quality score.
+- **Hardening after the first release:** bearer-token auth on the agent API and the MCP HTTP endpoint, a read-only MCP mode without write tools, an SQLite approval audit log and run history (`data/agent.db`), BM25 runbook ranking with operator-vocabulary expansion.
 - **Delivery:**
   - an HTTP API with a React chat and approval page
   - a Dockerfile
-  - a GitHub Actions CI workflow (lint, typecheck, tests, evals)
+  - a GitHub Actions CI workflow (lint, typecheck, 88 tests, evals, Docker build, browser e2e), mirrored locally by `npm run check`
   - 5 ADRs, a decisions log and a study guide
 
 ## Mocked vs real
