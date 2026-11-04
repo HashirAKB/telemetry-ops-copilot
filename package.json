@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "mcp:stdio": "tsx src/server/stdio.ts",
+    "mcp:http": "tsx src/server/http-main.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
