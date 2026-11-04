@@ -53,7 +53,7 @@ The agent will ask `Approve? [y/N]` in the terminal before the restart. Other en
 |---|---|
 | `npm run agent -- "<question>"` | One question, approvals as y/n prompts. Flags: `--provider mock\|anthropic`, `--transport inprocess\|stdio\|http`, `--approve cli\|all\|none` |
 | `npm run serve` | Agent HTTP API on :3000 (chat, approve/deny, traces), trace viewer at `/viewer`, React page at `/` once built (`npm run web:build`) |
-| `npm run mcp:stdio` / `npm run mcp:http` | The MCP server on its own ([Claude Desktop setup](docs/claude-desktop.md)) |
+| `npm run mcp:stdio` / `npm run mcp:http` | The MCP server on its own ([Claude Desktop setup](docs/desktop-host-setup.md)) |
 | `npm run eval` | Run the 25 eval cases, write `evals/results.{json,md}` |
 | `npm run check` | Everything the main CI job runs: lint, typecheck, tests, eval check, committed-results freshness |
 | `npm test` | Unit and integration tests |

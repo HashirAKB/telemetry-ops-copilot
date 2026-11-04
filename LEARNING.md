@@ -62,7 +62,7 @@ Unit tests check functions; **evals** check behaviour of the whole system on rea
 ### 1.8 Mock vs replay vs real model
 - **Mock** (`src/llm/mock.ts`): a deterministic planner that produces model-shaped responses. Lets everything run with no key, reproducibly.
 - **Replay** (`src/llm/replay.ts`): plays back recorded responses. Used to simulate a *bad* model to test guardrails.
-- **Real** (`src/llm/anthropic.ts`): the Anthropic API through the official SDK.
+- **Real** (`src/llm/api-provider.ts`): the Anthropic API through the official SDK.
 
 Because all three implement `LLMProvider`, the loop does not know which one it has. This is dependency inversion in practice.
 
@@ -101,7 +101,7 @@ See `src/data/anomalies.ts` and ADR 0004.
 | 16 | `src/llm/replay.ts`, `fixtures/*.json` | Testing guardrails with a deliberately bad model |
 | 17 | `evals/score.ts`, `evals/run.ts`, `evals/cases.json`, `evals/judge.ts` | Measuring behaviour; safety from evidence; LLM-as-judge kept separate from gating metrics |
 | 18 | `tests/*.test.ts` | How each layer is tested |
-| 19 | `src/llm/anthropic.ts` | The real API call |
+| 19 | `src/llm/api-provider.ts` | The real API call |
 | 20 | `src/agent/agent-db.ts`, `src/agent/audit.ts`, `src/agent/run-store.ts` | The agent's own storage: approval audit log (a decorator) and run history that is honest about restarts |
 | 21 | `src/telemetry/otlp.ts` | Converting the same spans to OTLP/JSON for real observability backends |
 | 22 | `docs/adr/*`, `DECISIONS.md` | Why things are the way they are |

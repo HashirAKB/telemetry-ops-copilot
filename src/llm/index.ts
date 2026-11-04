@@ -1,6 +1,6 @@
 // Pick an LLM provider by name. "auto" uses the real API only if a key is set.
 import { config } from "../config";
-import { AnthropicProvider } from "./anthropic";
+import { AnthropicProvider } from "./api-provider";
 import { MockProvider } from "./mock";
 import type { LLMProvider } from "./types";
 
