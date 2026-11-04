@@ -154,3 +154,37 @@ describe("MCP server over stdio", () => {
     }
   });
 });
+
+describe("MCP server hardening", () => {
+  it("requires the bearer token on the HTTP endpoint when configured", async () => {
+    const http = createMcpHttpServer(db, loadRunbooks(), { apiToken: "mcp-secret" });
+    await new Promise<void>((resolve) => http.listen(0, resolve));
+    const url = new URL(`http://localhost:${(http.address() as AddressInfo).port}/mcp`);
+    try {
+      const anonymous = new Client({ name: "anon", version: "1.0.0" });
+      await expect(anonymous.connect(new StreamableHTTPClientTransport(url))).rejects.toThrow();
+
+      const authorized = new Client({ name: "authorized", version: "1.0.0" });
+      await authorized.connect(
+        new StreamableHTTPClientTransport(url, { requestInit: { headers: { Authorization: "Bearer mcp-secret" } } }),
+      );
+      expect((await authorized.listTools()).tools).toHaveLength(6);
+      await authorized.close();
+    } finally {
+      http.close();
+    }
+  });
+
+  it("a read-only server does not expose write tools at all", async () => {
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    await createMcpServer(db, loadRunbooks(), { allowWrites: false }).connect(serverSide);
+    const readOnly = new Client({ name: "ro", version: "1.0.0" });
+    await readOnly.connect(clientSide);
+    const names = (await readOnly.listTools()).tools.map((t) => t.name);
+    expect(names).not.toContain("restart_device");
+    expect(names).not.toContain("create_incident");
+    const attempt = await readOnly.callTool({ name: "restart_device", arguments: { device_id: "D-01", reason: "test" } });
+    expect(attempt.isError).toBe(true);
+    await readOnly.close();
+  });
+});

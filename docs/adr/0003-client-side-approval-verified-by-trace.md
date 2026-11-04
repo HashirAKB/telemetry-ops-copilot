@@ -13,4 +13,4 @@
 
 ## Consequences
 - A prompt-injected model can *ask* for a restart, but cannot perform one without a human saying yes.
-- The MCP server itself does not enforce approval; other MCP hosts (Claude Desktop) apply their own confirmation. A production deployment would add server-side authorization too (defence in depth).
+- The MCP server itself does not run the approval flow; other MCP hosts (Claude Desktop) apply their own confirmation. As defence in depth the server can require a bearer token on HTTP (`MCP_API_TOKEN`) and can run read-only (`MCP_READ_ONLY=1`), in which case write tools do not exist for any host.

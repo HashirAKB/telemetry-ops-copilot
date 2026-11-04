@@ -28,7 +28,16 @@ function toResult(run: () => unknown): CallToolResult {
   }
 }
 
-export function createMcpServer(db: DB, runbooks: Runbook[]): McpServer {
+export interface McpServerOptions {
+  /**
+   * false = do not register write tools at all (a read-only deployment).
+   * Defence in depth: even a host that skips human approval cannot call
+   * tools that do not exist.
+   */
+  allowWrites?: boolean;
+}
+
+export function createMcpServer(db: DB, runbooks: Runbook[], options: McpServerOptions = {}): McpServer {
   const server = new McpServer({ name: "telemetry-ops", version: "0.1.0" });
 
   // Register a tool from the shared definitions. The SDK validates arguments
@@ -63,8 +72,10 @@ export function createMcpServer(db: DB, runbooks: Runbook[]): McpServer {
     return { target: a.target, method: a.method, window: a.window, count: anomalies.length, anomalies };
   });
   tool("search_runbooks", (a) => ({ results: searchRunbooks(runbooks, a.query) }));
-  tool("create_incident", (a) => createIncident(db, a));
-  tool("restart_device", (a) => restartDevice(db, a.device_id, a.reason));
+  if (options.allowWrites ?? true) {
+    tool("create_incident", (a) => createIncident(db, a));
+    tool("restart_device", (a) => restartDevice(db, a.device_id, a.reason));
+  }
 
   // Resources: each runbook is readable at runbook://<slug>.
   server.registerResource(

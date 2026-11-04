@@ -7,6 +7,6 @@ import { openDb } from "../data/db";
 import { loadRunbooks } from "../data/runbooks";
 import { createMcpServer } from "./mcp-server";
 
-const server = createMcpServer(openDb(config.dbPath), loadRunbooks());
+const server = createMcpServer(openDb(config.dbPath), loadRunbooks(), { allowWrites: !config.mcpReadOnly });
 await server.connect(new StdioServerTransport());
 console.error(`telemetry-ops MCP server on stdio (db: ${config.dbPath})`);

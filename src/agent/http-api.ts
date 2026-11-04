@@ -17,13 +17,13 @@
 // could approve a restart. Static pages (/, /viewer) stay public; they hold
 // no data and ask for the token themselves.
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { createServer, type ServerResponse, type Server } from "node:http";
 import { extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { LLMProvider } from "../llm/types";
-import { readJson } from "../server/http";
+import { isAuthorized, readJson } from "../server/http";
 import { defaultSink } from "../telemetry/otlp";
 import { Tracer } from "../telemetry/tracer";
 import { openAgentDb } from "./agent-db";
@@ -45,13 +45,6 @@ export interface AgentApiOptions {
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const MIME: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" };
-
-/** Constant-time comparison so the token cannot be guessed byte by byte from response timing. */
-export function isAuthorized(header: string | undefined, token: string): boolean {
-  const expected = Buffer.from(`Bearer ${token}`);
-  const actual = Buffer.from(header ?? "");
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
 
 function send(res: ServerResponse, status: number, body: unknown, type = "application/json") {
   res.writeHead(status, { "Content-Type": type });

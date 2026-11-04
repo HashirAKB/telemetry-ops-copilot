@@ -41,7 +41,7 @@ const mcp =
   values.transport === "stdio"
     ? await connectStdio()
     : values.transport === "http"
-      ? await connectHttp(values.url)
+      ? await connectHttp(values.url, config.mcpApiToken || undefined)
       : await connectInProcess(openSeededDb(config.dbPath));
 
 const provider = createProvider(values.provider as ProviderName);

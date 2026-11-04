@@ -137,7 +137,7 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 
 - The `AnthropicProvider` is type-checked against the official SDK but was not run against the live API while building (no network access to LLM APIs). Mock and replay paths are fully tested.
 - Mock planner understands a fixed set of intents by keywords; questions outside them get a capabilities message.
-- The agent HTTP API supports a bearer token (`AGENT_API_TOKEN`); without it, it is open. The MCP HTTP endpoint has no authentication: local use only.
+- The agent HTTP API supports a bearer token (`AGENT_API_TOKEN`); without it, it is open. The MCP HTTP endpoint supports a bearer token (`MCP_API_TOKEN`) and a read-only mode (`MCP_READ_ONLY=1`); both are off by default for local use.
 - A run waiting for approval cannot survive a server restart; it is marked `interrupted` (run history and the audit log are persisted in `data/agent.db`).
 - Restarts are simulated (an audit row and a status flag in SQLite).
 - Runbook search is BM25 over words (no synonyms or embeddings): "overheat" finds "overheating", but "too hot" does not.
@@ -146,9 +146,8 @@ Short version below. Details in [docs/adr](docs/adr) and [DECISIONS.md](DECISION
 ## What I'd do next
 
 1. **Run the eval suite against a real model** (`npm run eval -- --provider anthropic --judge`), commit `evals/results-anthropic.md`, and tune the system prompt against it.
-2. **Authorization on the MCP HTTP endpoint** and a server-side write policy, so a host other than this agent cannot skip approval (defence in depth).
-3. **Stream progress to the web page** (Server-Sent Events) instead of polling.
-4. **Semantic runbook search** (embeddings, with BM25 as a hybrid) once there are more than a handful of runbooks.
+2. **Stream progress to the web page** (Server-Sent Events) instead of polling.
+3. **Semantic runbook search** (embeddings, with BM25 as a hybrid) once there are more than a handful of runbooks.
 
 ### Done after the first release
 
@@ -156,6 +155,7 @@ These were the original "next" items; each is implemented with tests in its own 
 
 - Bearer-token auth on the agent HTTP API (`AGENT_API_TOKEN`); the web page and trace viewer ask for the token.
 - Approval audit log in SQLite (`data/agent.db`, `GET /api/audit`) for CLI and HTTP decisions.
+- MCP HTTP endpoint hardening: optional bearer token (`MCP_API_TOKEN`) and a read-only mode (`MCP_READ_ONLY=1`) in which the write tools are not registered at all.
 - Run history in SQLite (`data/agent.db`): finished runs survive a restart; runs cut off by a restart are marked `interrupted` instead of hanging forever.
 - BM25 runbook ranking (IDF, term saturation, length normalisation).
 - OTLP/HTTP JSON trace export (`OTEL_EXPORTER_OTLP_ENDPOINT`).

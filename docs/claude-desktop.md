@@ -58,6 +58,11 @@ npx @modelcontextprotocol/inspector
 
 Choose transport "Streamable HTTP" and URL `http://localhost:3001/mcp`.
 
+## Hardening
+
+- `MCP_READ_ONLY=1` (in the `env` block above, or for `npm run mcp:http`) removes `create_incident` and `restart_device` from the server entirely. Use it when a host should only investigate.
+- `MCP_API_TOKEN=<secret>` makes the HTTP endpoint require `Authorization: Bearer <secret>`. The agent sends it automatically with `--transport http`.
+
 ## Troubleshooting
 
 - "Database has no metrics": run `npm run seed`, and check `DB_PATH` is absolute.

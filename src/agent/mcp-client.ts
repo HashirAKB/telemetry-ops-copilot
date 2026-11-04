@@ -28,8 +28,9 @@ export async function connectStdio(): Promise<Client> {
 }
 
 /** Connect to a running Streamable HTTP server, e.g. http://localhost:3001/mcp */
-export async function connectHttp(url: string): Promise<Client> {
+export async function connectHttp(url: string, token?: string): Promise<Client> {
   const client = new Client(CLIENT_INFO);
-  await client.connect(new StreamableHTTPClientTransport(new URL(url)));
+  const requestInit = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+  await client.connect(new StreamableHTTPClientTransport(new URL(url), { requestInit }));
   return client;
 }

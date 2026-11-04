@@ -105,3 +105,7 @@ Decisions taken while building without the owner available. Each entry: decision
 ## D26. Persist runs, but mark runs cut off by a restart as "interrupted" instead of resuming them
 - **Alternatives:** keep runs in memory; persist the whole conversation and resume after restart.
 - **Why:** a waiting run is a Promise inside the process; resuming would mean persisting the message history, the pending approval and re-entering the loop mid-step, which is a durable-execution engine, out of scope. Marking them interrupted gives clients a truthful final state. Runs and the audit log share one agent-side DB (`data/agent.db`, renamed from `audit.db`).
+
+## D27. Server-side defence in depth: bearer token on MCP HTTP, and a read-only mode that omits write tools
+- **Alternatives:** server-side approval queue; per-tool scopes in the token.
+- **Why:** the strongest guarantee for a host that should not write is that write tools do not exist on its server. A shared bearer token is the minimum for a network endpoint; scoped tokens (OAuth, as the MCP spec describes for remote servers) are the production step after this.
